@@ -8,36 +8,45 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
-use Illuminate\Support\Facades\Storage; // ★追加: Storageファサード
-use App\Models\Question; // ★追加: Questionモデル
-use App\Models\Answer; // ★追加: Answerモデル
-use App\Models\Comment; // ★追加: Commentモデル
-use App\Models\User; // ★追加: Userモデル (明示的に)
+use Illuminate\Support\Facades\Storage;
+use App\Models\Question;
+use App\Models\Answer;
+use App\Models\Comment;
+use App\Models\User;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): View
     {
-         $user = $request->user(); // ★変更：$request->user() を利用
+        $user = $request->user();
 
-        // ↓↓↓ ここからユーザーが投稿した質問、回答、コメントを取得するロジックを追記 ↓↓↓
-        $userQuestions = $user->questions()->latest()->get();
-        $userAnswers = $user->answers()->latest()->get();
-        $userComments = $user->comments()->latest()->get();
-        // ↑↑↑ ここまで追記 ↑↑↑
+        // ユーザーが投稿した質問 (これは通常リレーション不要)
+        $userQuestions = Question::where('user_id', $user->id)->latest()->get();
 
+        // ★★★ 変更: 回答の取得時に質問リレーションをEager Load ★★★
+        $userAnswers = Answer::where('user_id', $user->id)
+                            ->with('question') // 'question' リレーションをロード
+                            ->latest()
+                            ->get();
+
+        // ★★★ 変更: コメントの取得時にコメント対象リレーションをEager Load ★★★
+        // comments()リレーションがcommentable() (ポリモーフィック) を使用している場合
+        // loadMorph() を使用して 'commentable' リレーションをロード
+        $userComments = Comment::where('user_id', $user->id)
+                                ->with('answer.question') // commentable リレーションをロード
+                                ->latest()
+                                ->get();
+
+        $bookmarkedQuestions = $user->bookmarks()->latest()->get();
 
         return view('profile.edit', [
             'user' => $user,
-            'userQuestions' => $userQuestions,// ★追加
-            'userAnswers' => $userAnswers,// ★追加
-            'userComments' => $userComments,// ★追加
+            'userQuestions' => $userQuestions,
+            'userAnswers' => $userAnswers,
+            'userComments' => $userComments,
+            'bookmarkedQuestions' => $bookmarkedQuestions,
         ]);
     }
-
     /**
      * Update the user's profile information.
      */

@@ -100,25 +100,54 @@
             </div>
 
             {{-- 自分が投稿したコメント一覧 --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-full">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">{{ __('自分が投稿したコメント') }}</h3>
-                    @forelse ($userComments as $comment)
-                        <div class="mb-2 p-2 border rounded-md">
-                            <p class="text-gray-800">
-                                回答へのコメント: <a href="{{ route('questions.show', $comment->answer->question) }}#answer-{{ $comment->answer->id }}" class="text-blue-600 hover:underline">
-                                    {{ Str::limit($comment->answer->body, 50) }}
-                                </a>
-                            </p>
-                            <p class="text-sm text-gray-600">{{ $comment->created_at->diffForHumans() }}</p>
-                            {{-- コメント本文の表示を追加 --}}
-                            <p class="mt-1 text-gray-700 text-sm">{{ Str::limit($comment->body, 150) }}</p>
-                        </div>
-                    @empty
-                        <p class="text-gray-700">まだコメントを投稿していません。</p>
-                    @endforelse
-                </div>
+<div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
+    <div class="max-w-full">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">{{ __('自分が投稿したコメント') }}</h3>
+        @forelse ($userComments as $comment)
+            <div class="mb-2 p-2 border rounded-md">
+                <p class="text-gray-800">
+                    {{-- コメントは常に回答に紐付くので、直接 $comment->answer にアクセス --}}
+                    回答へのコメント:
+                    {{-- $comment->answer が存在することを確認（回答が削除された場合など） --}}
+                    @if ($comment->answer)
+                        <a href="{{ route('questions.show', $comment->answer->question) }}#answer-{{ $comment->answer->id }}" class="text-blue-600 hover:underline">
+                            {{ Str::limit($comment->answer->body, 50) }} {{-- 回答の本文を表示 --}}
+                        </a>
+                    @else
+                        {{ __('（関連回答は削除されました）') }}
+                    @endif
+                </p>
+                <p class="text-sm text-gray-600">{{ $comment->created_at->diffForHumans() }}</p>
+                {{-- コメント本文の表示 --}}
+                <p class="mt-1 text-gray-700 text-sm">{{ Str::limit($comment->content, 150) }}</p> {{-- ★変更: $comment->body を $comment->content に --}}
             </div>
+        @empty
+            <p class="text-gray-700">まだコメントを投稿していません。</p>
+        @endforelse
+    </div>
+</div>
+
+            <div class="mt-8 bg-white shadow sm:rounded-lg">
+              <div class="p-6">
+                 <h3 class="text-xl font-semibold text-gray-900 mb-4">{{ __('ブックマークした質問') }}</h3>
+
+                @forelse ($bookmarkedQuestions as $question)
+                 <div class="border-b border-gray-200 py-4 last:border-b-0">
+                     <p class="text-lg font-medium text-gray-900">
+                         <a href="{{ route('questions.show', $question->id) }}" class="hover:underline">
+                             {{ $question->title }}
+                          </a>
+                       </p>
+                <p class="text-sm text-gray-600 mt-1">{{ Str::limit($question->body, 100) }}</p>
+                <p class="text-xs text-gray-500 mt-2">
+                    {{ __('投稿日:') }} {{ $question->created_at->diffForHumans() }}
+                </p>
+            </div>
+        @empty
+            <p class="text-gray-600">{{ __('まだブックマークした質問はありません。') }}</p>
+        @endforelse
+    </div>
+</div>
 
             {{-- ユーザー退会フォーム --}}
             <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">

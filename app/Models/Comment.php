@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo; // BelongsToをインポート
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Comment extends Model
 {
@@ -17,9 +17,9 @@ class Comment extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'user_id',   // コメント投稿者のID
-        'answer_id', // コメントが紐付く回答のID
-        'content',   // コメントの内容
+        'user_id',
+        'answer_id', // コメント対象の回答ID
+        'content', 
     ];
 
     /**
@@ -41,4 +41,5 @@ class Comment extends Model
     {
         return $this->belongsTo(Answer::class);
     }
+
 }

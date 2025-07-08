@@ -25,7 +25,6 @@
     {{-- プロフィール画像変更フォーム --}}
     <form method="post" action="{{ route('profile.updateImage') }}" enctype="multipart/form-data" class="mt-6 space-y-6">
         @csrf
-        @method('patch') {{-- PUT/PATCHメソッドを使用 --}}
 
         <div>
             <x-input-label for="profile_image" :value="__('新しいプロフィール画像')" />
