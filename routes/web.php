@@ -61,10 +61,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     // あなたのカスタム画像ルート (ProfileControllerのメソッドに合わせる)
-    // ★★★ ここを修正します！ 'profile.image.update' から 'profile.updateImage' に変更 ★★★
-    Route::post('/profile/image', [ProfileController::class, 'updateImage'])->name('profile.updateImage');
-    Route::delete('/profile/image', [ProfileController::class, 'deleteImage'])->name('profile.deleteImage');
-
+    
+    // ★★★  'profile.image.update' から 'profile.updateImage' に変更 ★★★
+    Route::patch('/profile/image', [ProfileController::class, 'updateImage'])->name('profile.image.update');
+    Route::delete('/profile/image', [ProfileController::class, 'deleteImage'])->name('profile.image.delete');
     // ベストアンサー選定ルート
     Route::post('/questions/{question}/answers/{answer}/best', [QuestionController::class, 'markAsBestAnswer'])->name('answers.markAsBestAnswer');
 });

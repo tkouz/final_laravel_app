@@ -44,20 +44,20 @@
                             <p class="text-sm text-gray-600">{{ $question->created_at->diffForHumans() }}</p>
                             <p class="mt-1 text-gray-700 text-sm">{{ Str::limit($question->body, 150) }}</p>
 
-                            @can('update', $question)
-                                <div class="mt-2 text-right">
-                                    <a href="{{ route('questions.edit', $question) }}" class="inline-flex items-center px-3 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-2">
-                                        {{ __('編集') }}
-                                    </a>
-                                    <form action="{{ route('questions.destroy', $question) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150" onclick="return confirm('本当に削除しますか？')">
-                                            {{ __('削除') }}
-                                        </button>
-                                    </form>
-                                </div>
-                            @endcan
+                {{-- ★ここを追記：編集・削除ボタン --}}
+                <div class="mt-2 flex space-x-2">
+                    <a href="{{ route('questions.edit', $question) }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        {{ __('編集') }}
+                    </a>
+                    <form action="{{ route('questions.destroy', $question) }}" method="POST" onsubmit="return confirm('本当に削除しますか？');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            {{ __('削除') }}
+                        </button>
+                    </form>
+                </div>
+                {{-- ★ここまで追記 --}}
                         </div>
                     @empty
                         <p class="text-gray-700">まだ質問を投稿していません。</p>
@@ -65,39 +65,50 @@
                 </div>
             </div>
 
-            {{-- 自分が投稿した回答一覧 --}}
-            <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">
-                <div class="max-w-full">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">{{ __('自分が投稿した回答') }}</h3>
-                    @forelse ($userAnswers as $answer)
-                        <div class="mb-2 p-2 border rounded-md">
-                            <p class="text-gray-800">
-                                質問: <a href="{{ route('questions.show', $answer->question) }}" class="text-blue-600 hover:underline">{{ Str::limit($answer->question->title, 50) }}</a>
-                            </p>
-                            <p class="text-sm text-gray-600">{{ $answer->created_at->diffForHumans() }}</p>
-                            {{-- 回答本文の表示を追加 --}}
-                            <p class="mt-1 text-gray-700 text-sm">{{ Str::limit($answer->body, 150) }}</p>
+           {{-- 自分が投稿した回答一覧 --}}
+<div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg mt-8">
+    <div class="max-w-full">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">{{ __('自分が投稿した回答') }}</h3>
+        @forelse ($userAnswers as $answer)
+            <div class="mb-2 p-2 border rounded-md">
+                <p class="text-gray-800">
+                    質問:
+                    @if ($answer->question)
+                        <a href="{{ route('questions.show', $answer->question) }}" class="text-blue-600 hover:underline">
+                            {{ Str::limit($answer->question->title, 50) }}
+                        </a>
+                    @else
+                        {{ __('（関連質問は削除されました）') }}
+                    @endif
+                </p>
+                <p class="text-sm text-gray-600">{{ $answer->created_at->diffForHumans() }}</p>
+                {{-- ★ここを追記または修正：回答本文の表示 --}}
+                <p class="mt-1 text-gray-700 text-sm">{{ Str::limit($answer->content, 150) }}</p> 
 
-                            @can('update', $answer)
-                                <div class="mt-2 text-right">
-                                    <a href="{{ route('answers.edit', $answer) }}" class="inline-flex items-center px-3 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-2">
-                                        {{ __('編集') }}
-                                    </a>
-                                    <form action="{{ route('answers.destroy', $answer) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="inline-flex items-center px-3 py-1 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150" onclick="return confirm('本当に削除しますか？')">
-                                            {{ __('削除') }}
-                                        </button>
-                                    </form>
-                                </div>
-                            @endcan
-                        </div>
-                    @empty
-                        <p class="text-gray-700">まだ回答を投稿していません。</p>
-                    @endforelse
+                 {{-- ★ここを追記：編集・削除ボタン --}}
+                <div class="mt-2 flex space-x-2">
+                    {{-- 回答の編集ルート (もしあれば) --}}
+                    {{-- 現状の resource('answers') は except(['edit', 'update']) している可能性があるので、
+                         もしエラーが出たら routes/web.php で answers.edit が有効か確認してください --}}
+                    <a href="{{ route('answers.edit', $answer) }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        {{ __('編集') }}
+                    </a>
+                    {{-- 回答の削除フォーム --}}
+                    <form action="{{ route('answers.destroy', $answer) }}" method="POST" onsubmit="return confirm('本当に削除しますか？');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            {{ __('削除') }}
+                        </button>
+                    </form>
                 </div>
+                {{-- ★ここまで追記 --}}
             </div>
+        @empty
+            <p class="text-gray-700">まだ回答を投稿していません。</p>
+        @endforelse
+    </div>
+</div>
 
             {{-- 自分が投稿したコメント一覧 --}}
 <div class="p-4 sm:p-8 bg-white shadow sm:rounded-lg">

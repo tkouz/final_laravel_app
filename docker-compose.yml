@@ -100,6 +100,21 @@ services:
             - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
         networks:
             - sail
+
+            # ★★★ ここから phpmyadmin サービスを追加します ★★★
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        links:
+            - mysql:db # mysqlサービスへのリンク (dbというエイリアスでアクセス)
+        ports:
+            - '${PMA_PORT:-8080}:80' # アクセスポート。環境変数PMA_PORTがなければ8080
+        environment:
+            PMA_HOST: mysql # データベースホスト名 (docker-compose.ymlで定義したmysqlサービス名)
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}' # .envのDB_PASSWORDを使用
+        networks:
+            - sail
+    # ★★★ ここまで追加 ★★★
+    
 networks:
     sail:
         driver: bridge
