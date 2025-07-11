@@ -9,7 +9,9 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
+                {{-- ★ここから修正: x-data="{}" を追加 --}}
+                <div class="p-6 text-gray-900" x-data="{}">
+                {{-- ★ここまで修正 --}}
                     <div class="mb-4">
                         <h2 class="text-2xl font-bold text-gray-900">{{ $question->title }}</h2>
                         <p class="text-gray-600 text-sm">
@@ -19,6 +21,18 @@
                             @endif
                         </p>
                         <p class="mt-4 text-gray-800">{{ $question->body }}</p>
+
+                                                {{-- ★ここから質問の違反報告機能を追加 --}}
+                        @auth
+                            {{-- 自分の投稿には報告ボタンを表示しない --}}
+                            @if (Auth::id() !== $question->user_id)
+                                <button x-on:click="console.log('違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'question', reportableId: {{ $question->id }} })"
+                                       class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
+                                       {{ __('違反報告') }}
+                                </button>
+                            @endif
+                        @endauth
+                        {{-- ★ここまで質問の違反報告機能を追加 --}}
 
                         {{-- 質問画像表示 --}}
                         @if ($question->image_path)
@@ -118,6 +132,19 @@
                                     <span class="ml-2 px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">ベストアンサー</span>
                                 @endif
                             </p>
+
+                              {{-- ★ここから回答の違反報告機能を追加 --}}
+                            @auth
+                                {{-- 自分の投稿には報告ボタンを表示しない --}}
+                                @if (Auth::id() !== $answer->user_id)
+                                    <button x-on:click="console.log('回答の違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'answer', reportableId: {{ $answer->id }} })"
+                                           class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
+                                           {{ __('違反報告') }}
+                                    </button>
+                                @endif
+                            @endauth
+                            {{-- ★ここまで回答の違反報告機能を追加 --}}
+
                             {{-- ベストアンサー選定ボタン --}}
                             @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id)
                                 <form action="{{ route('answers.markAsBestAnswer', ['question' => $question->id, 'answer' => $answer->id]) }}" method="POST" class="mt-2 text-right">
@@ -174,6 +201,19 @@
             </div>
         </div>
     </div>
+
+        {{-- ★ここからモーダルコンポーネントの呼び出しを追加 --}}
+    @auth
+        {{-- 質問に対する違反報告モーダル --}}
+        <x-report-modal id="reportQuestionModal" reportableType="question" :reportableId="$question->id" />
+
+        {{-- 各回答に対する違反報告モーダル (ループの外で一つずつ生成する必要がある) --}}
+        {{-- Alpine.js の dispatch イベントで、クリックされたボタンに対応するモーダルを開く --}}
+        @foreach ($question->answers as $answer)
+            <x-report-modal id="reportAnswerModal-{{ $answer->id }}" reportableType="answer" :reportableId="$answer->id" />
+        @endforeach
+    @endauth
+    {{-- ★ここまでモーダルコンポーネントの呼び出しを追加 --}}
 
     {{-- ★ここから追加: JavaScript for Like and Bookmark buttons --}}
     @auth

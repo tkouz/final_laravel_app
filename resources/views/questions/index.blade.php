@@ -11,16 +11,14 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     {{-- 検索フォーム --}}
-                    {{-- ★ここを修正: フォームのレイアウトを調整し、日付フィルターを追加 --}}
                     <form action="{{ route('questions.index') }}" method="GET" class="mb-6 space-y-4 md:space-y-0 md:flex md:items-center md:space-x-4">
                         <input type="text" name="search" placeholder="キーワードで検索..." value="{{ $searchQuery }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto flex-grow">
 
-                        {{-- ★ここから追加: 投稿日時フィルター --}}
+                        {{-- 投稿日時フィルター --}}
                         <div class="flex items-center space-x-2 w-full md:w-auto">
                             <label for="date_filter" class="text-sm text-gray-700 whitespace-nowrap">投稿日時（以降）:</label>
                             <input type="date" name="date_filter" id="date_filter" value="{{ request('date_filter') }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full">
                         </div>
-                        {{-- ★ここまで追加 --}}
 
                         <select name="status_filter" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
                             <option value="all" {{ $statusFilter == 'all' ? 'selected' : '' }}>全て</option>
@@ -31,19 +29,15 @@
                             <option value="latest" {{ $sortBy == 'latest' ? 'selected' : '' }}>新しい順</option>
                             <option value="oldest" {{ $sortBy == 'oldest' ? 'selected' : '' }}>古い順</option>
                             <option value="most_answers" {{ $sortBy == 'most_answers' ? 'selected' : '' }}>回答数が多い順</option>
+                            {{-- ★ここから追加 --}}
+                            <option value="popular" {{ $sortBy == 'popular' ? 'selected' : '' }}>いいねが多い順</option>
+                            {{-- ★ここまで追加 --}}
                         </select>
                         <x-primary-button type="submit" class="w-full md:w-auto">{{ __('検索・絞り込み') }}</x-primary-button>
                         <a href="{{ route('questions.index') }}" class="inline-flex items-center justify-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 w-full md:w-auto">
                             {{ __('リセット') }}
                         </a>
                     </form>
-
-                    {{-- ★ここを削除: 検索窓の下の「新しい質問を投稿」ボタン --}}
-                    {{-- <div class="mb-4">
-                        <a href="{{ route('questions.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                            {{ __('新しい質問を投稿') }}
-                        </a>
-                    </div> --}}
 
                     @forelse ($questions as $question)
                         <div class="bg-gray-50 p-4 rounded-lg shadow-sm mb-4">
@@ -55,6 +49,8 @@
                             <p class="text-gray-600 text-sm">
                                 投稿者: {{ $question->user->name }} - {{ $question->created_at->diffForHumans() }}
                                 <span class="ml-2">回答数: {{ $question->answers_count }}</span>
+                                {{-- ★いいね数の表示を likes_count を優先するように修正 --}}
+                                <span class="ml-2">いいね数: {{ $question->likes_count ?? $question->likes->count() }}</span>
                                 @if ($question->is_resolved)
                                     <span class="ml-2 px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">解決済み</span>
                                 @endif
@@ -89,8 +85,9 @@
                                         🤍 いいね！
                                     </span>
                                 @endauth
+                                {{-- ★いいね数の表示部分も likes_count を優先するように修正 --}}
                                 <span id="like-count-{{ $question->id }}" class="text-gray-600 text-sm">
-                                    {{ $question->likes->count() }}
+                                    {{ $question->likes_count ?? $question->likes->count() }}
                                 </span>
 
                                 {{-- ブックマークボタン --}}

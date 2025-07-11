@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB; // ★DBファサードを追加
 
 class QuestionController extends Controller
 {
@@ -27,7 +28,11 @@ class QuestionController extends Controller
         // ★追加: 日付フィルターの取得
         $dateFilter = $request->query('date_filter');
 
-        $questions = Question::with(['user', 'answers.user', 'likes', 'bookmarkedByUsers']);
+        // with() でロードするリレーションは最初に定義
+        // likes リレーションは後で結合するので、ここでは with('likes') は不要になる場合があります
+        // ただし、likes_count を表示するために withCount('likes') を使用する方がシンプルです
+        // 以下の修正では withCount('likes') を使います
+        $questions = Question::with(['user', 'answers.user', 'bookmarkedByUsers']); // likes は withCount で取得するのでリストから除外
 
         // 検索ロジック
         if ($searchQuery) {
@@ -52,15 +57,29 @@ class QuestionController extends Controller
         // ★ここまで追加
 
         // ソートロジック
-        if ($sortBy === 'oldest') {
+        // ★ここから「いいねが多い順」のソートロジックを追加
+        if ($sortBy === 'popular') {
+            // likes_count カラムを追加し、そのカウントで並び替える
+            $questions->withCount('likes')->orderByDesc('likes_count');
+        } elseif ($sortBy === 'oldest') {
             $questions->oldest();
         } elseif ($sortBy === 'most_answers') {
             $questions->withCount('answers')->orderByDesc('answers_count');
         } else { // 'latest' (デフォルト)
             $questions->latest();
         }
+        // ★ここまで「いいねが多い順」のソートロジックを追加
+
 
         $questions = $questions->paginate(10);
+
+        // 各質問に対して、ログインユーザーがいいねしているか、ブックマークしているかを判定
+        // withCount('likes')を使っているので、ここではlikesリレーションは必要ありませんが
+        // いいねアイコンの表示のために is_liked_by_user は必要です
+        foreach ($questions as $question) {
+            $question->is_liked_by_user = Auth::check() ? $question->isLikedByUser(Auth::user()) : false;
+            $question->is_bookmarked_by_user = Auth::check() ? $question->isBookmarkedByUser(Auth::user()) : false;
+        }
 
         // $sortBy と $statusFilter, $searchQuery, $dateFilter 変数をビューに渡す
         return view('questions.index', compact('questions', 'sortBy', 'statusFilter', 'searchQuery', 'dateFilter')); // ★修正: $dateFilterを追加

@@ -4,9 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-// ★ 後でこのEnumクラスを作成
-use App\Enums\ReportedObjectType; 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Report extends Model
 {
@@ -18,36 +17,26 @@ class Report extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'reported_object_type',
-        'reported_object_id',
-        'reporter_user_id',
-        'report_reason',
-        'report_comment',
-        'is_handled',
+        'user_id',
+        'reportable_id',
+        'reportable_type',
+        'reason',
+        'comment',
+        'status',
     ];
 
     /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
+     * この報告を送信したユーザーを取得
      */
-    protected $casts = [
-        'reported_object_type' => ReportedObjectType::class, // ★ Enumキャスト
-        'is_handled' => 'boolean',
-    ];
-
-    /**
-     * Get the user who reported the object.
-     */
-    public function reporter()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reporter_user_id'); // 外部キー名がデフォルトと異なるため指定
+        return $this->belongsTo(User::class);
     }
 
     /**
-     * Get the parent reported model (question or answer).
+     * この報告が属するモデル (質問または回答) を取得
      */
-    public function reported_object()
+    public function reportable(): MorphTo
     {
         return $this->morphTo();
     }

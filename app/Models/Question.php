@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany; // ★追加: BelongsToManyをインポート
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Question extends Model
 {

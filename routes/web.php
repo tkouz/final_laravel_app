@@ -7,6 +7,7 @@ use App\Http\Controllers\AnswerController;
 use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LikeController;
+use App\Http\Controllers\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +68,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile/image', [ProfileController::class, 'deleteImage'])->name('profile.image.delete');
     // ベストアンサー選定ルート
     Route::post('/questions/{question}/answers/{answer}/best', [QuestionController::class, 'markAsBestAnswer'])->name('answers.markAsBestAnswer');
+
+    Route::post('/report', [ReportController::class, 'store'])->name('reports.store');
 });
 
 // 質問詳細ページのルート (未認証ユーザーもアクセス可能) - ★注意: 認証グループの外で、かつquestions/createより後に配置
