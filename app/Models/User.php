@@ -4,10 +4,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-// ↓ここから追加する use ステートメント
-use Laravel\Sanctum\HasApiTokens; // ★追加：Sanctumを使っていた場合
-use Illuminate\Database\Eloquent\Relations\HasMany; // ★追加
-use Illuminate\Database\Eloquent\Relations\BelongsToMany; // ★追加
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 
 class User extends Authenticatable
@@ -25,8 +24,10 @@ class User extends Authenticatable
         'email',
         'password',
         // ↓ここに追加する $fillable の要素
-        'profile_image_path', // ★追加
-        'self_introduction',  // ★追加
+        'profile_image_path',
+        'self_introduction',
+        'role',
+        'is_admin',
     ];
 
     /**
@@ -47,12 +48,15 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'role' => 'integer',
+        'is_admin' => 'boolean', // ★追加: is_adminカラムもbooleanにキャスト
     ];
-    
+
+
     // ↓↓↓ ここから下に、リレーションシップメソッドを追記 ↓↓↓
 
     /**
-     * このユーザーが投稿した質問を取得します。
+     * このユーザーが投稿した質問を取得
      */
     public function questions(): HasMany
     {
@@ -60,7 +64,7 @@ class User extends Authenticatable
     }
 
     /**
-     * このユーザーが投稿した回答を取得します。
+     * このユーザーが投稿した回答を取得
      */
     public function answers(): HasMany
     {
@@ -68,27 +72,33 @@ class User extends Authenticatable
     }
 
     /**
-     * このユーザーが投稿したコメントを取得します。
+     * このユーザーが投稿したコメントを取得
      */
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
 
-    /**
-     * このユーザーがブックマークした質問を取得します。
-     * ★修正: HasManyからBelongsToManyへ
-     */
     public function bookmarks(): BelongsToMany
     {
         return $this->belongsToMany(Question::class, 'bookmarks', 'user_id', 'question_id')->withTimestamps();
     }
 
     /**
-     * このユーザーが「いいね！」した質問を取得します。
+     * このユーザーが「いいね！」した質問を取得
      */
     public function likes(): HasMany
     {
         return $this->hasMany(Like::class);
+    }
+
+    /**
+     * ユーザーが管理者であるかを確認する
+     *
+     * @return bool
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin;
     }
 }

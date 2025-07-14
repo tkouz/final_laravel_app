@@ -29,13 +29,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            // あなたのマイグレーションファイルで追加した他のカラムも必要に応じてここに定義
-            // 例えば:
-            // 'profile_image_path' => null, // こちらのキー名を、マイグレーションファイルとUserモデルの$fillableに合わせてください
-            // 'self_introduction' => fake()->paragraph(),
-            // 'last_login_at' => now(),
-            // 'role' => 'general',
-            // 'is_active' => true,
+            'role' => 0,
         ];
     }
 
@@ -46,6 +40,13 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+   public function admin(): static
+    {
+      return $this->state(fn (array $attributes) => [
+          'role' => 1, // 管理者ユーザー
         ]);
     }
 }

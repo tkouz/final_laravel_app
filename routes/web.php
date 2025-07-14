@@ -8,6 +8,7 @@ use App\Http\Controllers\BookmarkController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Admin\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +72,16 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/report', [ReportController::class, 'store'])->name('reports.store');
 });
+
+// 管理者専用のルートグループ
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // 例: 管理者ダッシュボード
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // ここに、ユーザー管理、質問管理、レポート管理など、
+    // 管理者のみがアクセスできるルートを追加
+    // Route::resource('users', AdminUserController::class);
+});
+
 
 // 質問詳細ページのルート (未認証ユーザーもアクセス可能) - ★注意: 認証グループの外で、かつquestions/createより後に配置
 Route::get('/questions/{question}', [QuestionController::class, 'show'])

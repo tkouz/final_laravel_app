@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Question;
 use App\Models\Answer;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash; 
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,6 +15,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+
+        User::factory()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@example.com', // 管理者としてログインするためのメールアドレス
+            'password' => Hash::make('password'), // 管理者ユーザーのパスワード
+            'role' => 1, // ★★★ 管理者ロールとして1を設定 ★★★
+            'is_admin' => true,
+        ]);
+        
         // ユーザーを常に作成
         User::factory(10)->create();
 
