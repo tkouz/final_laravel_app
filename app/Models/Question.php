@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany; // ★追加: BelongsToManyをインポート
-use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany; // MorphManyをuse
 
 class Question extends Model
 {
@@ -25,6 +25,7 @@ class Question extends Model
         'image_path',
         'is_resolved',
         'best_answer_id',
+        'is_visible', // ★追加: 投稿の表示/非表示フラグ
     ];
 
     /**
@@ -34,6 +35,7 @@ class Question extends Model
      */
     protected $casts = [
         'is_resolved' => 'boolean',
+        'is_visible' => 'boolean', // ★追加: boolean型にキャスト
     ];
 
     /**
@@ -81,16 +83,14 @@ class Question extends Model
 
     /**
      * この質問をブックマークしたユーザーを取得します。
-     * ★修正: HasManyからBelongsToManyへ
      */
-    public function bookmarkedByUsers(): BelongsToMany // メソッド名を変更して、ユーザー側からのリレーションと区別
+    public function bookmarkedByUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'bookmarks', 'question_id', 'user_id')->withTimestamps();
     }
 
     /**
      * 現在のユーザーがこの質問をブックマークしているかを確認します。
-     * ★修正: ロジックをBelongsToManyに合わせて変更
      */
     public function isBookmarkedByUser(?User $user): bool
     {
@@ -98,5 +98,13 @@ class Question extends Model
             return false;
         }
         return $this->bookmarkedByUsers()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * この質問に対する違反報告を取得します。
+     */
+    public function reports(): MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
     }
 }

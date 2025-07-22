@@ -8,11 +8,10 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable; // ★変更：HasApiTokens を追加
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -28,6 +27,7 @@ class User extends Authenticatable
         'self_introduction',
         'role',
         'is_admin',
+        'is_active', // ★追加: 利用停止フラグ
     ];
 
     /**
@@ -50,6 +50,7 @@ class User extends Authenticatable
         'password' => 'hashed',
         'role' => 'integer',
         'is_admin' => 'boolean', // ★追加: is_adminカラムもbooleanにキャスト
+        'is_active' => 'boolean', // ★追加: is_activeカラムもbooleanにキャスト
     ];
 
 
@@ -90,6 +91,14 @@ class User extends Authenticatable
     public function likes(): HasMany
     {
         return $this->hasMany(Like::class);
+    }
+
+    /**
+     * このユーザーが行った違反報告を取得します。
+     */
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
     }
 
     /**
