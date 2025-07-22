@@ -33,7 +33,8 @@ Route::get('/questions', [QuestionController::class, 'index'])
          ->name('questions.index');
 
 // 認証済みユーザーのみがアクセスできるルートグループ
-Route::middleware(['auth', 'prevent.admin.access'])->group(function () {
+// ★修正: 'prevent.admin.access' ミドルウェアをコメントアウト
+Route::middleware(['auth' /*, 'prevent.admin.access'*/])->group(function () {
     // 質問投稿フォーム表示のルートを、動的な質問詳細ルートより前に配置
     // これにより、'/questions/create' が '/questions/{question}' として解釈されるのを防ぎます。
     Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
@@ -89,11 +90,9 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // 投稿（質問または回答）の表示停止ルート
     Route::post('/reports/toggle-visibility/{type}/{id}', [AdminReportController::class, 'toggleVisibility'])->name('reports.toggleVisibility');
 
-    // ★★★ ここから追加 ★★★
     // ユーザー管理に関するルート
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index'); // ユーザー一覧
     Route::post('/users/{user}/toggle-active', [AdminUserController::class, 'toggleActive'])->name('users.toggleActive'); // ユーザーの利用停止/再開
-    // ★★★ ここまで追加 ★★★
 });
 
 

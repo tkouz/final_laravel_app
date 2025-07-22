@@ -9,9 +9,7 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                {{-- ★ここから修正: x-data="{}" を追加 --}}
                 <div class="p-6 text-gray-900" x-data="{}">
-                {{-- ★ここまで修正 --}}
                     <div class="mb-4">
                         <h2 class="text-2xl font-bold text-gray-900">{{ $question->title }}</h2>
                         <p class="text-gray-600 text-sm">
@@ -22,17 +20,34 @@
                         </p>
                         <p class="mt-4 text-gray-800">{{ $question->body }}</p>
 
-                                                {{-- ★ここから質問の違反報告機能を追加 --}}
+                        {{-- 質問の編集・削除ボタン --}}
+                        @auth
+                            @if (Auth::id() === $question->user_id)
+                                <div class="mt-4 flex space-x-2">
+                                    <a href="{{ route('questions.edit', $question) }}" class="inline-flex items-center px-4 py-2 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                        {{ __('編集') }}
+                                    </a>
+                                    <form action="{{ route('questions.destroy', $question) }}" method="POST" onsubmit="return confirm('本当にこの質問を削除しますか？');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                            {{ __('削除') }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @endif
+                        @endauth
+
+                        {{-- 質問の違反報告機能 --}}
                         @auth
                             {{-- 自分の投稿には報告ボタンを表示しない --}}
                             @if (Auth::id() !== $question->user_id)
                                 <button x-on:click="console.log('違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'question', reportableId: {{ $question->id }} })"
-                                       class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
-                                       {{ __('違反報告') }}
+                                        class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
+                                        {{ __('違反報告') }}
                                 </button>
                             @endif
                         @endauth
-                        {{-- ★ここまで質問の違反報告機能を追加 --}}
 
                         {{-- 質問画像表示 --}}
                         @if ($question->image_path)
@@ -49,8 +64,8 @@
                                     data-question-id="{{ $question->id }}"
                                     data-liked="{{ $question->isLikedByUser(Auth::user()) ? 'true' : 'false' }}"
                                     class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
-                                           {{ $question->isLikedByUser(Auth::user()) ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
-                                           focus:outline-none transition ease-in-out duration-150"
+                                            {{ $question->isLikedByUser(Auth::user()) ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
+                                            focus:outline-none transition ease-in-out duration-150"
                                 >
                                     <span id="like-icon" class="mr-1">
                                         {{ $question->isLikedByUser(Auth::user()) ? '❤️' : '🤍' }}
@@ -66,15 +81,15 @@
                                 {{ $question->likes->count() }}
                             </span>
 
-                            {{-- ★ここから追加: ブックマークボタン --}}
+                            {{-- ブックマークボタン --}}
                             @auth
                                 <button
                                     id="bookmark-button"
                                     data-question-id="{{ $question->id }}"
                                     data-bookmarked="{{ $isBookmarked ? 'true' : 'false' }}"
                                     class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
-                                           {{ $isBookmarked ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
-                                           focus:outline-none transition ease-in-out duration-150"
+                                            {{ $isBookmarked ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
+                                            focus:outline-none transition ease-in-out duration-150"
                                 >
                                     <span id="bookmark-icon" class="mr-1">
                                         {{ $isBookmarked ? '🔖' : '📑' }}
@@ -86,7 +101,6 @@
                                     📑 ブックマーク
                                 </span>
                             @endauth
-                            {{-- ★ここまで追加 --}}
                         </div>
                     </div>
 
@@ -106,6 +120,11 @@
                                 <span class="ml-2 px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded-full">選ばれました！</span>
                             </h3>
                             <p class="text-gray-700 mt-2">{{ $question->bestAnswer->content }}</p>
+                            @if ($question->bestAnswer->image_path)
+                                <div class="mt-2">
+                                    <img src="{{ Storage::url($question->bestAnswer->image_path) }}" alt="ベストアンサー画像" class="max-w-full h-auto rounded-lg shadow-md">
+                                </div>
+                            @endif
                             <p class="text-right text-sm text-green-600">
                                 選ばれた回答者: {{ $question->bestAnswer->user->name }} - {{ $question->bestAnswer->created_at->diffForHumans() }}
                             </p>
@@ -133,17 +152,35 @@
                                 @endif
                             </p>
 
-                              {{-- ★ここから回答の違反報告機能を追加 --}}
+                            {{-- ★ここから追加: 回答の編集・削除ボタン --}}
+                            @auth
+                                @if (Auth::id() === $answer->user_id)
+                                    <div class="mt-2 flex space-x-2 justify-end"> {{-- 右寄せにするためにjustify-endを追加 --}}
+                                        <a href="{{ route('answers.edit', $answer) }}" class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                            {{ __('編集') }}
+                                        </a>
+                                        <form action="{{ route('answers.destroy', $answer) }}" method="POST" onsubmit="return confirm('本当にこの回答を削除しますか？');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 focus:bg-red-700 active:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                                {{ __('削除') }}
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endif
+                            @endauth
+                            {{-- ★ここまで追加 --}}
+
+                            {{-- 回答の違反報告機能 --}}
                             @auth
                                 {{-- 自分の投稿には報告ボタンを表示しない --}}
                                 @if (Auth::id() !== $answer->user_id)
                                     <button x-on:click="console.log('回答の違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'answer', reportableId: {{ $answer->id }} })"
-                                           class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
-                                           {{ __('違反報告') }}
+                                            class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
+                                            {{ __('違反報告') }}
                                     </button>
                                 @endif
                             @endauth
-                            {{-- ★ここまで回答の違反報告機能を追加 --}}
 
                             {{-- ベストアンサー選定ボタン --}}
                             @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id)
@@ -202,7 +239,7 @@
         </div>
     </div>
 
-        {{-- ★ここからモーダルコンポーネントの呼び出しを追加 --}}
+    {{-- モーダルコンポーネントの呼び出し --}}
     @auth
         {{-- 質問に対する違反報告モーダル --}}
         <x-report-modal id="reportQuestionModal" reportableType="question" :reportableId="$question->id" />
@@ -213,9 +250,8 @@
             <x-report-modal id="reportAnswerModal-{{ $answer->id }}" reportableType="answer" :reportableId="$answer->id" />
         @endforeach
     @endauth
-    {{-- ★ここまでモーダルコンポーネントの呼び出しを追加 --}}
 
-    {{-- ★ここから追加: JavaScript for Like and Bookmark buttons --}}
+    {{-- JavaScript for Like and Bookmark buttons --}}
     @auth
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -337,5 +373,4 @@
         });
     </script>
     @endauth
-    {{-- ★ここまで追加 --}}
 </x-app-layout>

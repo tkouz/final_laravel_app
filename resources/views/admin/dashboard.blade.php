@@ -1,3 +1,5 @@
+{{-- resources/views/admin/dashboard.blade.php --}}
+
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -31,16 +33,20 @@
                             @else
                                 <ul class="list-disc pl-5 space-y-2">
                                     @foreach ($topReportedQuestions as $report)
-                                        <li>
-                                            @if ($report->reportable)
+                                        {{-- ★修正: ここで reportable が存在するかを再チェック --}}
+                                        @if ($report->reportable)
+                                            <li>
                                                 <a href="{{ route('questions.show', $report->reportable->id) }}" class="text-indigo-600 hover:text-indigo-900">
                                                     {{ Str::limit($report->reportable->title, 50) }}
                                                 </a>
                                                 <span class="text-gray-500 text-sm"> (報告数: {{ $report->report_count }})</span>
-                                            @else
-                                                削除済み質問 (報告数: {{ $report->report_count }})
-                                            @endif
-                                        </li>
+                                            </li>
+                                        @else
+                                            {{-- reportable が null の場合は、削除済みとして表示 --}}
+                                            <li>
+                                                <span class="text-gray-500 text-sm">削除済み質問 (報告数: {{ $report->report_count }})</span>
+                                            </li>
+                                        @endif
                                     @endforeach
                                 </ul>
                             @endif
@@ -54,16 +60,20 @@
                             @else
                                 <ul class="list-disc pl-5 space-y-2">
                                     @foreach ($topReportedAnswers as $report)
-                                        <li>
-                                            @if ($report->reportable)
+                                        {{-- ★修正: ここで reportable が存在するかを再チェック --}}
+                                        @if ($report->reportable)
+                                            <li>
                                                 <a href="{{ route('questions.show', $report->reportable->question_id) }}#answer-{{ $report->reportable->id }}" class="text-indigo-600 hover:text-indigo-900">
                                                     {{ Str::limit($report->reportable->content, 50) }}
                                                 </a>
                                                 <span class="text-gray-500 text-sm"> (報告数: {{ $report->report_count }})</span>
-                                            @else
-                                                削除済み回答 (報告数: {{ $report->report_count }})
-                                            @endif
-                                        </li>
+                                            </li>
+                                        @else
+                                            {{-- reportable が null の場合は、削除済みとして表示 --}}
+                                            <li>
+                                                <span class="text-gray-500 text-sm">削除済み回答 (報告数: {{ $report->report_count }})</span>
+                                            </li>
+                                        @endif
                                     @endforeach
                                 </ul>
                             @endif
@@ -78,7 +88,9 @@
                                 <ul class="list-disc pl-5 space-y-2">
                                     @foreach ($topSuspendedUsers as $user)
                                         <li>
-                                            {{ $user->name }}
+                                            <a href="{{ route('admin.users.index') }}" class="text-indigo-600 hover:text-indigo-900">
+                                                {{ $user->name }}
+                                            </a>
                                             <span class="text-gray-500 text-sm">
                                                 (停止質問: {{ $user->questions_count }}, 停止回答: {{ $user->answers_count }})
                                             </span>

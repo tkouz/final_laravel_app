@@ -34,6 +34,7 @@
                             <p class="text-sm text-gray-600">コメント: {{ $report->comment }}</p>
                         @endif
                         <p class="text-sm text-gray-600">ステータス: {{ $report->status }}</p>
+                        <p class="text-sm text-gray-600">この報告対象の合計報告数: {{ $totalReportCount }} 件</p> {{-- ★追加 --}}
                     </div>
 
                     <div class="mb-6">
@@ -75,7 +76,7 @@
                         @if ($report->reportable)
                             <form action="{{ route('admin.reports.toggleVisibility', ['type' => $report->reportable_type === App\Models\Question::class ? 'question' : 'answer', 'id' => $report->reportable->id]) }}" method="POST" onsubmit="return confirm('本当にこの投稿の表示状態を切り替えますか？');">
                                 @csrf
-                                @method('POST') {{-- POSTルートとして定義したのでPOSTを使用 --}}
+                                @method('POST')
                                 <button type="submit" class="px-4 py-2 rounded-md {{ $report->reportable->is_visible ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600' }} text-white">
                                     {{ $report->reportable->is_visible ? '投稿を非表示にする' : '投稿を表示する' }}
                                 </button>

@@ -15,7 +15,6 @@
                     <x-validation-errors class="mb-4" />
 
                     {{-- 質問更新フォーム --}}
-                    {{-- ★ここを修正: enctype="multipart/form-data" を追加 --}}
                     <form method="POST" action="{{ route('questions.update', $question) }}" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
