@@ -10,7 +10,9 @@ use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\UserController as AdminUserController; // ★追加: AdminUserControllerをuse
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+// ★追加: PreventAdminActionsミドルウェアのuse宣言
+use App\Http\Middleware\PreventAdminActions;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,14 +35,11 @@ Route::get('/questions', [QuestionController::class, 'index'])
          ->name('questions.index');
 
 // 認証済みユーザーのみがアクセスできるルートグループ
-// ★修正: 'prevent.admin.access' ミドルウェアをコメントアウト
-Route::middleware(['auth' /*, 'prevent.admin.access'*/])->group(function () {
+Route::middleware(['auth', PreventAdminActions::class])->group(function () {
     // 質問投稿フォーム表示のルートを、動的な質問詳細ルートより前に配置
-    // これにより、'/questions/create' が '/questions/{question}' として解釈されるのを防ぎます。
     Route::get('/questions/create', [QuestionController::class, 'create'])->name('questions.create');
 
     // QuestionControllerに対するリソースルートを定義
-    // index, show, create メソッドは上記で定義済みのため除外
     Route::resource('questions', QuestionController::class)->except(['index', 'show', 'create']);
 
     // 回答投稿に関するルート
@@ -64,10 +63,10 @@ Route::middleware(['auth' /*, 'prevent.admin.access'*/])->group(function () {
     // Breezeが生成する標準のprofileルート
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    // ★修正: profile.delete から profile.destroy に修正
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     // あなたのカスタム画像ルート (ProfileControllerのメソッドに合わせる)
 
-    // ★★★  'profile.image.update' から 'profile.updateImage' に変更 ★★★
     Route::patch('/profile/image', [ProfileController::class, 'updateImage'])->name('profile.image.update');
     Route::delete('/profile/image', [ProfileController::class, 'deleteImage'])->name('profile.image.delete');
     // ベストアンサー選定ルート

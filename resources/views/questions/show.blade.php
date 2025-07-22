@@ -22,7 +22,8 @@
 
                         {{-- 質問の編集・削除ボタン --}}
                         @auth
-                            @if (Auth::id() === $question->user_id)
+                            {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                            @if (Auth::id() === $question->user_id && !Auth::user()->isAdmin())
                                 <div class="mt-4 flex space-x-2">
                                     <a href="{{ route('questions.edit', $question) }}" class="inline-flex items-center px-4 py-2 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                         {{ __('編集') }}
@@ -40,8 +41,8 @@
 
                         {{-- 質問の違反報告機能 --}}
                         @auth
-                            {{-- 自分の投稿には報告ボタンを表示しない --}}
-                            @if (Auth::id() !== $question->user_id)
+                            {{-- 自分の投稿ではなく、かつ管理ユーザーでない場合にのみ表示 --}}
+                            @if (Auth::id() !== $question->user_id && !Auth::user()->isAdmin())
                                 <button x-on:click="console.log('違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'question', reportableId: {{ $question->id }} })"
                                         class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
                                         {{ __('違反報告') }}
@@ -59,19 +60,27 @@
                         {{-- いいね！ボタンと表示 --}}
                         <div class="mt-4 flex items-center space-x-2">
                             @auth
-                                <button
-                                    id="like-button"
-                                    data-question-id="{{ $question->id }}"
-                                    data-liked="{{ $question->isLikedByUser(Auth::user()) ? 'true' : 'false' }}"
-                                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
-                                            {{ $question->isLikedByUser(Auth::user()) ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
-                                            focus:outline-none transition ease-in-out duration-150"
-                                >
-                                    <span id="like-icon" class="mr-1">
-                                        {{ $question->isLikedByUser(Auth::user()) ? '❤️' : '🤍' }}
+                                {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                @if (!Auth::user()->isAdmin())
+                                    <button
+                                        id="like-button"
+                                        data-question-id="{{ $question->id }}"
+                                        data-liked="{{ $question->isLikedByUser(Auth::user()) ? 'true' : 'false' }}"
+                                        class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
+                                                {{ $question->isLikedByUser(Auth::user()) ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
+                                                focus:outline-none transition ease-in-out duration-150"
+                                    >
+                                        <span id="like-icon" class="mr-1">
+                                            {{ $question->isLikedByUser(Auth::user()) ? '❤️' : '🤍' }}
+                                        </span>
+                                        いいね！
+                                    </button>
+                                @else
+                                    {{-- 管理ユーザーの場合はボタンを非表示にし、アイコンと数だけ表示 --}}
+                                    <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
+                                        🤍 いいね！
                                     </span>
-                                    いいね！
-                                </button>
+                                @endif
                             @else
                                 <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
                                     🤍 いいね！
@@ -82,30 +91,41 @@
                             </span>
 
                             {{-- ブックマークボタン --}}
-                            @auth
-                                <button
-                                    id="bookmark-button"
-                                    data-question-id="{{ $question->id }}"
-                                    data-bookmarked="{{ $isBookmarked ? 'true' : 'false' }}"
-                                    class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
-                                            {{ $isBookmarked ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
-                                            focus:outline-none transition ease-in-out duration-150"
-                                >
-                                    <span id="bookmark-icon" class="mr-1">
-                                        {{ $isBookmarked ? '🔖' : '📑' }}
+                            <div class="mt-4 flex items-center space-x-2">
+                                @auth
+                                    {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                    @if (!Auth::user()->isAdmin())
+                                        <button
+                                            id="bookmark-button"
+                                            data-question-id="{{ $question->id }}"
+                                            data-bookmarked="{{ $isBookmarked ? 'true' : 'false' }}"
+                                            class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
+                                                    {{ $isBookmarked ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
+                                                    focus:outline-none transition ease-in-out duration-150"
+                                        >
+                                            <span id="bookmark-icon" class="mr-1">
+                                                {{ $isBookmarked ? '🔖' : '📑' }}
+                                            </span>
+                                            ブックマーク
+                                        </button>
+                                    @else
+                                        {{-- 管理ユーザーの場合はボタンを非表示にし、アイコンだけ表示 --}}
+                                        <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
+                                            📑 ブックマーク
+                                        </span>
+                                    @endif
+                                @else
+                                    <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
+                                        📑 ブックマーク
                                     </span>
-                                    ブックマーク
-                                </button>
-                            @else
-                                <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
-                                    📑 ブックマーク
-                                </span>
-                            @endauth
+                                @endauth
+                            </div>
                         </div>
                     </div>
 
                     {{-- 質問の所有者で、かつまだベストアンサーが選ばれていない場合のみ表示 --}}
-                    @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id)
+                    {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                    @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id && !Auth::user()->isAdmin())
                         <div class="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 rounded-lg">
                             <p>ベストアンサーを選ぶことで、この質問を解決済みにできます。</p>
                         </div>
@@ -122,7 +142,7 @@
                             <p class="text-gray-700 mt-2">{{ $question->bestAnswer->content }}</p>
                             @if ($question->bestAnswer->image_path)
                                 <div class="mt-2">
-                                    <img src="{{ Storage::url($question->bestAnswer->image_path) }}" alt="ベストアンサー画像" class="max-w-full h-auto rounded-lg shadow-md">
+                                    <img src="{{ asset('storage/' . $question->bestAnswer->image_path) }}" alt="ベストアンサー画像" class="max-w-full h-auto rounded-lg shadow-md">
                                 </div>
                             @endif
                             <p class="text-right text-sm text-green-600">
@@ -152,9 +172,10 @@
                                 @endif
                             </p>
 
-                            {{-- ★ここから追加: 回答の編集・削除ボタン --}}
+                            {{-- 回答の編集・削除ボタン --}}
                             @auth
-                                @if (Auth::id() === $answer->user_id)
+                                {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                @if (Auth::id() === $answer->user_id && !Auth::user()->isAdmin())
                                     <div class="mt-2 flex space-x-2 justify-end"> {{-- 右寄せにするためにjustify-endを追加 --}}
                                         <a href="{{ route('answers.edit', $answer) }}" class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
                                             {{ __('編集') }}
@@ -169,12 +190,11 @@
                                     </div>
                                 @endif
                             @endauth
-                            {{-- ★ここまで追加 --}}
 
                             {{-- 回答の違反報告機能 --}}
                             @auth
-                                {{-- 自分の投稿には報告ボタンを表示しない --}}
-                                @if (Auth::id() !== $answer->user_id)
+                                {{-- 自分の投稿ではなく、かつ管理ユーザーでない場合にのみ表示 --}}
+                                @if (Auth::id() !== $answer->user_id && !Auth::user()->isAdmin())
                                     <button x-on:click="console.log('回答の違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'answer', reportableId: {{ $answer->id }} })"
                                             class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
                                             {{ __('違反報告') }}
@@ -183,7 +203,8 @@
                             @endauth
 
                             {{-- ベストアンサー選定ボタン --}}
-                            @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id)
+                            {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                            @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id && !Auth::user()->isAdmin())
                                 <form action="{{ route('answers.markAsBestAnswer', ['question' => $question->id, 'answer' => $answer->id]) }}" method="POST" class="mt-2 text-right">
                                     @csrf
                                     <x-primary-button type="submit" class="text-green-600 hover:text-green-800 text-sm">ベストアンサーに選ぶ</x-primary-button>
@@ -202,12 +223,15 @@
 
                             {{-- コメント投稿フォーム --}}
                             @auth
-                                <form action="{{ route('comments.store', $answer) }}" method="POST" class="mt-2">
-                                    @csrf
-                                    <x-textarea-input name="content" class="w-full text-sm" rows="2" placeholder="コメントを追加"></x-textarea-input>
-                                    <x-input-error :messages="$errors->get('content')" class="mt-2" />
-                                    <x-primary-button class="mt-2">コメントする</x-primary-button>
-                                </form>
+                                {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                @if (!Auth::user()->isAdmin())
+                                    <form action="{{ route('comments.store', $answer) }}" method="POST" class="mt-2">
+                                        @csrf
+                                        <x-textarea-input name="content" class="w-full text-sm" rows="2" placeholder="コメントを追加"></x-textarea-input>
+                                        <x-input-error :messages="$errors->get('content')" class="mt-2" />
+                                        <x-primary-button class="mt-2">コメントする</x-primary-button>
+                                    </form>
+                                @endif
                             @endauth
                         </div>
                     @empty
@@ -216,21 +240,26 @@
 
                     <h3 class="text-xl font-bold text-gray-900 mt-8 mb-4">回答を投稿する</h3>
                     @auth
-                        <form action="{{ route('answers.store', $question) }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <x-textarea-input name="content" class="w-full" rows="5" placeholder="あなたの回答を入力してください"></x-textarea-input>
-                            <x-input-error :messages="$errors->get('content')" class="mt-2" />
+                        {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                        @if (!Auth::user()->isAdmin())
+                            <form action="{{ route('answers.store', $question) }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <x-textarea-input name="content" class="w-full" rows="5" placeholder="あなたの回答を入力してください"></x-textarea-input>
+                                <x-input-error :messages="$errors->get('content')" class="mt-2" />
 
-                            {{-- 回答画像添付フィールド --}}
-                            <div class="mt-4">
-                                <x-input-label for="answer_image" :value="__('画像添付 (任意)')" />
-                                <input id="answer_image" class="block mt-1 w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" type="file" name="image" />
-                                <p class="mt-1 text-sm text-gray-500" id="file_input_help_answer">PNG, JPG, JPEG (最大2MB)</p>
-                                <x-input-error :messages="$errors->get('image')" class="mt-2" />
-                            </div>
+                                {{-- 回答画像添付フィールド --}}
+                                <div class="mt-4">
+                                    <x-input-label for="answer_image" :value="__('画像添付 (任意)')" />
+                                    <input id="answer_image" class="block mt-1 w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none" type="file" name="image" />
+                                    <p class="mt-1 text-sm text-gray-500" id="file_input_help_answer">PNG, JPG, JPEG (最大2MB)</p>
+                                    <x-input-error :messages="$errors->get('image')" class="mt-2" />
+                                </div>
 
-                            <x-primary-button class="mt-4">回答を投稿</x-primary-button>
-                        </form>
+                                <x-primary-button class="mt-4">回答を投稿</x-primary-button>
+                            </form>
+                        @else
+                            <p class="text-gray-700">回答を投稿するにはログインが必要です。</p>
+                        @endif
                     @else
                         <p class="text-gray-700">回答を投稿するにはログインが必要です。</p>
                     @endauth
@@ -241,18 +270,23 @@
 
     {{-- モーダルコンポーネントの呼び出し --}}
     @auth
-        {{-- 質問に対する違反報告モーダル --}}
-        <x-report-modal id="reportQuestionModal" reportableType="question" :reportableId="$question->id" />
+        {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+        @if (!Auth::user()->isAdmin())
+            {{-- 質問に対する違反報告モーダル --}}
+            <x-report-modal id="reportQuestionModal" reportableType="question" :reportableId="$question->id" />
 
-        {{-- 各回答に対する違反報告モーダル (ループの外で一つずつ生成する必要がある) --}}
-        {{-- Alpine.js の dispatch イベントで、クリックされたボタンに対応するモーダルを開く --}}
-        @foreach ($question->answers as $answer)
-            <x-report-modal id="reportAnswerModal-{{ $answer->id }}" reportableType="answer" :reportableId="$answer->id" />
-        @endforeach
+            {{-- 各回答に対する違反報告モーダル (ループの外で一つずつ生成する必要がある) --}}
+            {{-- Alpine.js の dispatch イベントで、クリックされたボタンに対応するモーダルを開く --}}
+            @foreach ($question->answers as $answer)
+                <x-report-modal id="reportAnswerModal-{{ $answer->id }}" reportableType="answer" :reportableId="$answer->id" />
+            @endforeach
+        @endif
     @endauth
 
     {{-- JavaScript for Like and Bookmark buttons --}}
     @auth
+    {{-- ★修正: 管理ユーザーでない場合にのみJavaScriptをロード --}}
+    @if (!Auth::user()->isAdmin())
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // いいねボタンの処理 (質問詳細ページではIDが単一なのでIDで取得)
@@ -372,5 +406,6 @@
             }
         });
     </script>
+    @endif {{-- !Auth::user()->isAdmin() の閉じタグ --}}
     @endauth
 </x-app-layout>
