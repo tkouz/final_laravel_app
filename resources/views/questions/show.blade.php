@@ -22,7 +22,7 @@
 
                         {{-- 質問の編集・削除ボタン --}}
                         @auth
-                            {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                            {{-- 自分の投稿者で、かつ管理ユーザーでない場合にのみ表示 --}}
                             @if (Auth::id() === $question->user_id && !Auth::user()->isAdmin())
                                 <div class="mt-4 flex space-x-2">
                                     <a href="{{ route('questions.edit', $question) }}" class="inline-flex items-center px-4 py-2 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
@@ -37,14 +37,27 @@
                                     </form>
                                 </div>
                             @endif
+
+                            {{-- 管理者用「表示停止/表示する」ボタン --}}
+                            @if (Auth::user()->isAdmin())
+                                <div class="mt-4 flex space-x-2">
+                                    <form action="{{ route('admin.reports.toggleVisibility', ['type' => 'question', 'id' => $question->id]) }}" method="POST" onsubmit="return confirm('本当にこの質問の表示状態を切り替えますか？');">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center px-4 py-2 rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 shadow-md
+                                            {{ $question->is_visible ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white' }}">
+                                            {{ $question->is_visible ? '表示を停止する' : '表示する' }}
+                                        </button>
+                                    </form>
+                                </div>
+                            @endif
                         @endauth
 
                         {{-- 質問の違反報告機能 --}}
                         @auth
                             {{-- 自分の投稿ではなく、かつ管理ユーザーでない場合にのみ表示 --}}
                             @if (Auth::id() !== $question->user_id && !Auth::user()->isAdmin())
-                                <button x-on:click="console.log('違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'question', reportableId: {{ $question->id }} })"
-                                        class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition ease-in-out duration-150">
+                                <button x-on:click="console.log('回答の違反報告ボタンがクリックされました！'); $dispatch('open-report-modal', { reportableType: 'question', reportableId: {{ $question->id }} })"
+                                        class="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-500 transition ease-in-out duration-150">
                                         {{ __('違反報告') }}
                                 </button>
                             @endif
@@ -60,7 +73,7 @@
                         {{-- いいね！ボタンと表示 --}}
                         <div class="mt-4 flex items-center space-x-2">
                             @auth
-                                {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                {{-- 管理ユーザーでない場合にのみ表示 --}}
                                 @if (!Auth::user()->isAdmin())
                                     <button
                                         id="like-button"
@@ -93,7 +106,7 @@
                             {{-- ブックマークボタン --}}
                             <div class="mt-4 flex items-center space-x-2">
                                 @auth
-                                    {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                    {{-- 管理ユーザーでない場合にのみ表示 --}}
                                     @if (!Auth::user()->isAdmin())
                                         <button
                                             id="bookmark-button"
@@ -104,19 +117,36 @@
                                                     focus:outline-none transition ease-in-out duration-150"
                                         >
                                             <span id="bookmark-icon" class="mr-1">
-                                                {{ $isBookmarked ? '🔖' : '📑' }}
+                                                {{-- ★修正: SVGアイコンに変更 --}}
+                                                @if ($isBookmarked)
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                                                        <path fill-rule="evenodd" d="M6 3a3 3 0 00-3 3v12a3 3 0 003 3h12a3 3 0 003-3V6a3 3 0 00-3-3H6zm.75 1.5a.75.75 0 00-.75.75v10.5a.75.75 0 00.75.75h9a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75h-9zM12 9a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0V9.75A.75.75 0 0112 9z" clip-rule="evenodd" />
+                                                    </svg>
+                                                @else
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                                    </svg>
+                                                @endif
                                             </span>
                                             ブックマーク
                                         </button>
                                     @else
                                         {{-- 管理ユーザーの場合はボタンを非表示にし、アイコンだけ表示 --}}
                                         <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
-                                            📑 ブックマーク
+                                            {{-- ★修正: SVGアイコンに変更 --}}
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                            </svg>
+                                            ブックマーク
                                         </span>
                                     @endif
                                 @else
                                     <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
-                                        📑 ブックマーク
+                                        {{-- ★修正: SVGアイコンに変更 --}}
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                        </svg>
+                                        ブックマーク
                                     </span>
                                 @endauth
                             </div>
@@ -124,7 +154,7 @@
                     </div>
 
                     {{-- 質問の所有者で、かつまだベストアンサーが選ばれていない場合のみ表示 --}}
-                    {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                    {{-- 管理ユーザーでない場合にのみ表示 --}}
                     @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id && !Auth::user()->isAdmin())
                         <div class="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-800 rounded-lg">
                             <p>ベストアンサーを選ぶことで、この質問を解決済みにできます。</p>
@@ -169,12 +199,12 @@
                                 {{-- 各回答にもベストアンサータグを追加 --}}
                                 @if ($answer->id === $question->best_answer_id)
                                     <span class="ml-2 px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">ベストアンサー</span>
-                                @endif
+                                    @endif
                             </p>
 
                             {{-- 回答の編集・削除ボタン --}}
                             @auth
-                                {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                {{-- 自分の投稿者で、かつ管理ユーザーでない場合にのみ表示 --}}
                                 @if (Auth::id() === $answer->user_id && !Auth::user()->isAdmin())
                                     <div class="mt-2 flex space-x-2 justify-end"> {{-- 右寄せにするためにjustify-endを追加 --}}
                                         <a href="{{ route('answers.edit', $answer) }}" class="inline-flex items-center px-3 py-1.5 bg-blue-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-600 focus:bg-blue-600 active:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
@@ -203,7 +233,7 @@
                             @endauth
 
                             {{-- ベストアンサー選定ボタン --}}
-                            {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                            {{-- 管理ユーザーでない場合にのみ表示 --}}
                             @if (Auth::check() && Auth::id() === $question->user_id && !$question->best_answer_id && !Auth::user()->isAdmin())
                                 <form action="{{ route('answers.markAsBestAnswer', ['question' => $question->id, 'answer' => $answer->id]) }}" method="POST" class="mt-2 text-right">
                                     @csrf
@@ -223,7 +253,7 @@
 
                             {{-- コメント投稿フォーム --}}
                             @auth
-                                {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                                {{-- 管理ユーザーでない場合にのみ表示 --}}
                                 @if (!Auth::user()->isAdmin())
                                     <form action="{{ route('comments.store', $answer) }}" method="POST" class="mt-2">
                                         @csrf
@@ -240,7 +270,7 @@
 
                     <h3 class="text-xl font-bold text-gray-900 mt-8 mb-4">回答を投稿する</h3>
                     @auth
-                        {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+                        {{-- 管理ユーザーでない場合にのみ表示 --}}
                         @if (!Auth::user()->isAdmin())
                             <form action="{{ route('answers.store', $question) }}" method="POST" enctype="multipart/form-data">
                                 @csrf
@@ -270,7 +300,7 @@
 
     {{-- モーダルコンポーネントの呼び出し --}}
     @auth
-        {{-- ★修正: 管理ユーザーでない場合にのみ表示 --}}
+        {{-- 管理ユーザーでない場合にのみ表示 --}}
         @if (!Auth::user()->isAdmin())
             {{-- 質問に対する違反報告モーダル --}}
             <x-report-modal id="reportQuestionModal" reportableType="question" :reportableId="$question->id" />
@@ -285,7 +315,7 @@
 
     {{-- JavaScript for Like and Bookmark buttons --}}
     @auth
-    {{-- ★修正: 管理ユーザーでない場合にのみJavaScriptをロード --}}
+    {{-- 管理ユーザーでない場合にのみJavaScriptをロード --}}
     @if (!Auth::user()->isAdmin())
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -385,11 +415,19 @@
                             this.dataset.bookmarked = isBookmarked;
 
                             if (isBookmarked) {
-                                bookmarkIcon.textContent = '🔖';
+                                bookmarkIcon.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                                        <path fill-rule="evenodd" d="M6 3a3 3 0 00-3 3v12a3 3 0 003 3h12a3 3 0 003-3V6a3 3 0 00-3-3H6zm.75 1.5a.75.75 0 00-.75.75v10.5a.75.75 0 00.75.75h9a.75.75 0 00.75-.75V5.25a.75.75 0 00-.75-.75h-9zM12 9a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0V9.75A.75.75 0 0112 9z" clip-rule="evenodd" />
+                                    </svg>
+                                `;
                                 this.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
                                 this.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
                             } else {
-                                bookmarkIcon.textContent = '📑';
+                                bookmarkIcon.innerHTML = `
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                    </svg>
+                                `;
                                 this.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
                                 this.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
                             }

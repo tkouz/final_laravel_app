@@ -1,3 +1,5 @@
+{{-- resources/views/layouts/navigation.blade.php --}}
+
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -23,8 +25,32 @@
                                 {{ __('違反報告管理') }}
                             </x-nav-link>
                             <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.index')">
-                                {{ __('ユーザー管理') }} {{-- ★追加 --}}
+                                {{ __('ユーザー管理') }}
                             </x-nav-link>
+                            {{-- ★ここから追加: 非表示投稿管理リンク (ドロップダウン) --}}
+                            <x-dropdown align="right" width="48">
+                                <x-slot name="trigger">
+                                    <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                                        <div>{{ __('非表示投稿管理') }}</div>
+
+                                        <div class="ml-1">
+                                            <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                        </div>
+                                    </button>
+                                </x-slot>
+
+                                <x-slot name="content">
+                                    <x-dropdown-link :href="route('admin.suspended-questions.index')">
+                                        {{ __('非表示の質問') }}
+                                    </x-dropdown-link>
+                                    <x-dropdown-link :href="route('admin.suspended-answers.index')">
+                                        {{ __('非表示の回答') }}
+                                    </x-dropdown-link>
+                                </x-slot>
+                            </x-dropdown>
+                            {{-- ★ここまで追加 --}}
                         @else
                             {{-- 一般ユーザー向けメニュー --}}
                             <x-nav-link :href="route('questions.index')" :active="request()->routeIs('questions.index')">
@@ -73,8 +99,16 @@
                                     {{ __('違反報告管理') }}
                                 </x-dropdown-link>
                                 <x-dropdown-link :href="route('admin.users.index')">
-                                    {{ __('ユーザー管理') }} {{-- ★追加 --}}
+                                    {{ __('ユーザー管理') }}
                                 </x-dropdown-link>
+                                {{-- ★ここから追加: ドロップダウン内の非表示投稿管理リンク --}}
+                                <x-dropdown-link :href="route('admin.suspended-questions.index')">
+                                    {{ __('非表示の質問') }}
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('admin.suspended-answers.index')">
+                                    {{ __('非表示の回答') }}
+                                </x-dropdown-link>
+                                {{-- ★ここまで追加 --}}
                             @else
                                 {{-- 一般ユーザー向けドロップダウンメニュー --}}
                                 <x-dropdown-link :href="route('profile.edit')">
@@ -99,14 +133,14 @@
                     <a href="{{ route('login') }}" class="font-semibold text-gray-600 hover:text-gray-900 focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">ログイン</a>
 
                     @if (Route::has('register'))
-                        <a href="{{ route('register') }}" class="ml-4 font-semibold text-gray-600 hover:text-gray-900 focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">新規登録</a>
+                        <a href="{{ route('register') }}" class="ms-4 font-semibold text-gray-600 hover:text-gray-900 focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">新規登録</a>
                     @endif
                 @endauth
             </div>
 
             <!-- Hamburger -->
             <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -129,8 +163,23 @@
                         {{ __('違反報告管理') }}
                     </x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.index')">
-                        {{ __('ユーザー管理') }} {{-- ★追加 --}}
+                        {{ __('ユーザー管理') }}
                     </x-responsive-nav-link>
+                    {{-- ★ここから追加: レスポンシブ非表示投稿管理リンク (セクション) --}}
+                    <div class="pt-4 pb-1 border-t border-gray-200">
+                        <div class="px-4">
+                            <div class="font-medium text-base text-gray-800">{{ __('非表示投稿管理') }}</div>
+                        </div>
+                        <div class="mt-3 space-y-1">
+                            <x-responsive-nav-link :href="route('admin.suspended-questions.index')">
+                                {{ __('非表示の質問') }}
+                            </x-responsive-nav-link>
+                            <x-responsive-nav-link :href="route('admin.suspended-answers.index')">
+                                {{ __('非表示の回答') }}
+                            </x-responsive-nav-link>
+                        </div>
+                    </div>
+                    {{-- ★ここまで追加 --}}
                 @else
                     {{-- 一般ユーザー向けレスポンシブメニュー --}}
                     <x-responsive-nav-link :href="route('questions.index')" :active="request()->routeIs('questions.index')">
@@ -167,7 +216,7 @@
             <div class="mt-3 space-y-1">
                 @auth
                     @if (Auth::user()->isAdmin())
-                        {{-- 管理者向けレスポンシブドロップダウン --}}
+                        {{-- 管理者向けレスポンシブドロップダウン (設定メニュー内) --}}
                         <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
                             {{ __('管理者ダッシュボード') }}
                         </x-responsive-nav-link>
@@ -175,10 +224,11 @@
                             {{ __('違反報告管理') }}
                         </x-responsive-nav-link>
                         <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.index')">
-                            {{ __('ユーザー管理') }} {{-- ★追加 --}}
+                            {{ __('ユーザー管理') }}
                         </x-responsive-nav-link>
+                        {{-- 非表示投稿管理はメインメニューに移動したので、ここでは不要 --}}
                     @else
-                        {{-- 一般ユーザー向けレスポンシブドロップダウン --}}
+                        {{-- 一般ユーザー向けレスポンシブドロップダウン (設定メニュー内) --}}
                         <x-responsive-nav-link :href="route('profile.edit')">
                             {{ __('プロフィール') }}
                         </x-responsive-nav-link>
@@ -196,14 +246,6 @@
                     </x-responsive-nav-link>
                 </form>
             </div>
-            @guest {{-- 未ログイン時のログイン/登録リンク --}}
-                <div class="px-4 py-2">
-                    <a href="{{ route('login') }}" class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">{{ __('ログイン') }}</a>
-                    @if (Route::has('register'))
-                        <a href="{{ route('register') }}" class="block w-full px-4 py-2 text-left text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">{{ __('新規登録') }}</a>
-                    @endif
-                </div>
-            @endguest
         </div>
     </div>
 </nav>

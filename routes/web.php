@@ -11,8 +11,10 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
-// ★追加: PreventAdminActionsミドルウェアのuse宣言
 use App\Http\Middleware\PreventAdminActions;
+// ★追加: SuspendedPostControllerをuse
+use App\Http\Controllers\Admin\SuspendedPostController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -63,7 +65,6 @@ Route::middleware(['auth', PreventAdminActions::class])->group(function () {
     // Breezeが生成する標準のprofileルート
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    // ★修正: profile.delete から profile.destroy に修正
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     // あなたのカスタム画像ルート (ProfileControllerのメソッドに合わせる)
 
@@ -92,6 +93,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     // ユーザー管理に関するルート
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index'); // ユーザー一覧
     Route::post('/users/{user}/toggle-active', [AdminUserController::class, 'toggleActive'])->name('users.toggleActive'); // ユーザーの利用停止/再開
+
+    // ★ここから追加: 非表示投稿管理ルート
+    Route::get('/suspended-questions', [SuspendedPostController::class, 'indexQuestions'])->name('suspended-questions.index');
+    Route::get('/suspended-answers', [SuspendedPostController::class, 'indexAnswers'])->name('suspended-answers.index');
+    // ★ここまで追加
 });
 
 

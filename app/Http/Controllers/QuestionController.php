@@ -3,90 +3,89 @@
 namespace App\Http\Controllers;
 
 use App\Models\Question;
-use App\Models\Answer;
+use App\Models\Answer; // Answerモデルをuse
+use App\Models\User;   // Userモデルをuse
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB; // ★DBファサードを追加
+use Illuminate\Support\Facades\Storage; // Storageファサードをuse
+use Illuminate\Http\RedirectResponse; // RedirectResponseをuse
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests; // ★追加: AuthorizesRequestsトレイトをuse
 
 class QuestionController extends Controller
 {
-    use AuthorizesRequests;
+    use AuthorizesRequests; // ★追加: AuthorizesRequestsトレイトを使用
 
     /**
-     * Display a listing of the resource.
+     * 質問一覧を表示します。
      */
     public function index(Request $request)
     {
-        // ソート順の初期化と取得
-        $sortBy = $request->query('sort_by', 'latest'); // デフォルトは 'latest'
-        // ステータスフィルターの初期化と取得
-        $statusFilter = $request->query('status_filter', 'all'); // デフォルトは 'all'
-        // 検索クエリの取得
-        $searchQuery = $request->query('search');
-        // ★追加: 日付フィルターの取得
-        $dateFilter = $request->query('date_filter');
+        $query = Question::with('user', 'answers', 'likes')
+                         ->where('is_visible', true); // is_visibleがtrueの質問のみ表示
 
-        // with() でロードするリレーションは最初に定義
-        // likes リレーションは後で結合するので、ここでは with('likes') は不要になる場合があります
-        // ただし、likes_count を表示するために withCount('likes') を使用する方がシンプルです
-        // 以下の修正では withCount('likes') を使います
-        $questions = Question::with(['user', 'answers.user', 'bookmarkedByUsers']); // likes は withCount で取得するのでリストから除外
+        $searchQuery = $request->input('keyword');
+        $statusFilter = $request->input('status');
+        $sortBy = $request->input('sort', 'latest'); // ソート順の値を取得 (デフォルトは'latest')
 
-        // 検索ロジック
-        if ($searchQuery) {
-            $questions->where(function ($query) use ($searchQuery) {
-                $query->where('title', 'like', '%' . $searchQuery . '%')
-                      ->orWhere('body', 'like', '%' . $searchQuery . '%');
+        // キーワード検索
+        if ($request->filled('keyword')) {
+            $keyword = $request->input('keyword');
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', "%{$keyword}%")
+                  ->orWhere('body', 'like', "%{$keyword}%");
             });
         }
 
-        // ステータスフィルターロジック
-        if ($statusFilter === 'open') {
-            $questions->where('is_resolved', false);
-        } elseif ($statusFilter === 'resolved') {
-            $questions->where('is_resolved', true);
+        // 投稿日時フィルター
+        if ($request->filled('posted_at')) {
+            $postedAt = $request->input('posted_at');
+            switch ($postedAt) {
+                case 'today':
+                    $query->whereDate('created_at', today());
+                    break;
+                case 'week':
+                    $query->whereBetween('created_at', [now()->subWeek(), now()]);
+                    break;
+                case 'month':
+                    $query->whereBetween('created_at', [now()->subMonth(), now()]);
+                    break;
+                case 'year':
+                    $query->whereBetween('created_at', [now()->subYear(), now()]);
+                    break;
+            }
         }
 
-        // ★ここから追加: 日付フィルターロジック
-        if ($dateFilter) {
-            // 指定された日付以降の質問をフィルタリング
-            $questions->whereDate('created_at', '>=', $dateFilter);
+        // ステータスフィルター (解決済み/未解決)
+        if ($request->filled('status')) {
+            $status = $request->input('status');
+            if ($status === 'resolved') {
+                $query->whereNotNull('best_answer_id');
+            } elseif ($status === 'unresolved') {
+                $query->whereNull('best_answer_id');
+            }
         }
-        // ★ここまで追加
 
-        // ソートロジック
-        // ★ここから「いいねが多い順」のソートロジックを追加
-        if ($sortBy === 'popular') {
-            // likes_count カラムを追加し、そのカウントで並び替える
-            $questions->withCount('likes')->orderByDesc('likes_count');
+        // ソート順
+        if ($sortBy === 'latest') {
+            $query->orderBy('created_at', 'desc');
         } elseif ($sortBy === 'oldest') {
-            $questions->oldest();
-        } elseif ($sortBy === 'most_answers') {
-            $questions->withCount('answers')->orderByDesc('answers_count');
-        } else { // 'latest' (デフォルト)
-            $questions->latest();
-        }
-        // ★ここまで「いいねが多い順」のソートロジックを追加
-
-
-        $questions = $questions->paginate(10);
-
-        // 各質問に対して、ログインユーザーがいいねしているか、ブックマークしているかを判定
-        // withCount('likes')を使っているので、ここではlikesリレーションは必要ありませんが
-        // いいねアイコンの表示のために is_liked_by_user は必要です
-        foreach ($questions as $question) {
-            $question->is_liked_by_user = Auth::check() ? $question->isLikedByUser(Auth::user()) : false;
-            $question->is_bookmarked_by_user = Auth::check() ? $question->isBookmarkedByUser(Auth::user()) : false;
+            $query->orderBy('created_at', 'asc');
+        } elseif ($sortBy === 'answers_desc') {
+            // 回答数でソートするために、answers_countをロード
+            $query->withCount('answers')->orderBy('answers_count', 'desc');
+        } elseif ($sortBy === 'likes_desc') {
+            // いいね数でソートするために、likes_countをロード
+            $query->withCount('likes')->orderBy('likes_count', 'desc');
         }
 
-        // $sortBy と $statusFilter, $searchQuery, $dateFilter 変数をビューに渡す
-        return view('questions.index', compact('questions', 'sortBy', 'statusFilter', 'searchQuery', 'dateFilter')); // ★修正: $dateFilterを追加
+        $questions = $query->paginate(10); // 1ページ10件でページネーション
+
+        return view('questions.index', compact('questions', 'searchQuery', 'statusFilter', 'sortBy'));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * 質問投稿フォームを表示します。
      */
     public function create()
     {
@@ -94,97 +93,112 @@ class QuestionController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * 新しい質問をデータベースに保存します。
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        $validatedData = $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'required|string',
-            'image' => 'required|image|max:2048', // 画像は必須、最大2MB
+            'image' => 'nullable|image|max:2048', // 画像は任意、最大2MB
         ]);
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            // publicディスクの'questions'ディレクトリに画像を保存
-            $imagePath = $request->file('image')->store('questions', 'public');
+            $imagePath = $request->file('image')->store('question_images', 'public');
         }
 
-        Auth::user()->questions()->create([
-            'title' => $validatedData['title'],
-            'body' => $validatedData['body'],
-            'image_path' => $imagePath, // 画像パスを保存
+        $question = new Question([
+            'title' => $validated['title'],
+            'body' => $validated['body'],
+            'image_path' => $imagePath,
+            'user_id' => Auth::id(),
         ]);
+
+        $question->save();
 
         return redirect()->route('questions.index')->with('success', '質問が投稿されました！');
     }
 
     /**
-     * Display the specified resource.
+     * 指定された質問の詳細を表示します。
      */
     public function show(Question $question)
     {
-        $question->load(['user', 'answers.user', 'answers.comments.user', 'likes', 'bookmarkedByUsers']);
-        $isBookmarked = Auth::check() ? $question->bookmarkedByUsers()->where('user_id', Auth::id())->exists() : false;
-        return view('questions.show', compact('question', 'isBookmarked'));
+        // 質問が非表示の場合、404エラーまたはリダイレクト
+        if (!$question->is_visible && (!Auth::check() || !Auth::user()->isAdmin())) { // 管理者以外は見れないようにする
+            abort(404); // または redirect()->route('questions.index')->with('error', 'この質問は現在表示されていません。');
+        }
+
+        // 質問に対する回答と、各回答に紐づくコメントをロード
+        $question->load(['answers.user', 'answers.comments.user', 'user', 'likes']);
+
+        // ログインユーザーがいいねしているか、ブックマークしているかを確認
+        $isLiked = Auth::check() ? $question->isLikedByUser(Auth::user()) : false;
+        $isBookmarked = Auth::check() ? Auth::user()->bookmarks()->where('question_id', $question->id)->exists() : false;
+
+        return view('questions.show', compact('question', 'isLiked', 'isBookmarked'));
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * 質問編集フォームを表示します。
      */
     public function edit(Question $question)
     {
-        $this->authorize('update', $question); // ポリシーによる認可
+        // 質問の所有者のみが編集できるようにポリシーを適用
+        $this->authorize('update', $question);
+
         return view('questions.edit', compact('question'));
     }
 
     /**
-     * Update the specified resource in storage.
+     * 質問をデータベースで更新します。
      */
-    public function update(Request $request, Question $question)
+    public function update(Request $request, Question $question): RedirectResponse
     {
-        $this->authorize('update', $question); // ポリシーによる認可
+        // 質問の所有者のみが更新できるようにポリシーを適用
+        $this->authorize('update', $question);
 
-        $validatedData = $request->validate([
+        $validated = $request->validate([
             'title' => 'required|string|max:255',
             'body' => 'required|string',
             'image' => 'nullable|image|max:2048', // 画像は任意、最大2MB
-            'remove_image' => 'boolean', // 画像削除のチェックボックス用
+            'current_image_path' => 'nullable|string', // 現在の画像パス (削除判断用)
         ]);
-
-        $dataToUpdate = [
-            'title' => $validatedData['title'],
-            'body' => $validatedData['body'],
-        ];
 
         // 画像の処理
         if ($request->hasFile('image')) {
-            // 古い画像があれば削除
+            // 新しい画像がアップロードされた場合、古い画像を削除して新しい画像を保存
             if ($question->image_path) {
                 Storage::disk('public')->delete($question->image_path);
             }
-            // 新しい画像を保存
-            $dataToUpdate['image_path'] = $request->file('image')->store('questions', 'public');
-        } elseif (isset($validatedData['remove_image']) && $validatedData['remove_image']) {
-            // remove_imageがチェックされていて、既存の画像パスがある場合
+            $question->image_path = $request->file('image')->store('question_images', 'public');
+        } elseif ($request->boolean('remove_image')) { // 画像削除チェックボックスがオンの場合
             if ($question->image_path) {
                 Storage::disk('public')->delete($question->image_path);
+                $question->image_path = null;
             }
-            $dataToUpdate['image_path'] = null; // データベースからパスを削除
+        } elseif (!$request->filled('current_image_path') && $question->image_path) {
+            // current_image_pathが送信されず、かつ既存の画像パスがある場合（画像がフォームから削除されたと判断）
+            Storage::disk('public')->delete($question->image_path);
+            $question->image_path = null;
         }
-        // 画像が送信されず、削除チェックもされていない場合は、既存のパスを維持
 
-        $question->update($dataToUpdate);
+
+        $question->title = $validated['title'];
+        $question->body = $validated['body'];
+        $question->save();
 
         return redirect()->route('questions.show', $question)->with('success', '質問が更新されました！');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * 質問をデータベースから削除します。
      */
-    public function destroy(Question $question)
+    public function destroy(Question $question): RedirectResponse
     {
-        $this->authorize('delete', $question); // ポリシーによる認可
+        // 質問の所有者のみが削除できるようにポリシーを適用
+        $this->authorize('delete', $question);
 
         // 関連する画像があれば削除
         if ($question->image_path) {
@@ -192,22 +206,30 @@ class QuestionController extends Controller
         }
 
         $question->delete();
-        return redirect()->route('questions.index')->with('success', '質問が削除されました！');
+
+        return redirect()->route('questions.index')->with('success', '質問が削除されました。');
     }
 
     /**
-     * Mark an answer as the best answer.
+     * ベストアンサーを選定します。
      */
-    public function markAsBestAnswer(Request $request, Question $question, Answer $answer)
+    public function markAsBestAnswer(Request $request, Question $question, Answer $answer): RedirectResponse
     {
-        // 質問の所有者のみがベストアンサーを選べるようにする
-        if (Auth::id() !== $question->user_id) {
-            return back()->with('error', 'この質問のベストアンサーを選ぶ権限がありません。');
+        // 質問の所有者のみがベストアンサーを選べるようにポリシーを適用
+        $this->authorize('markAsBestAnswer', $question);
+
+        // 質問がまだ解決済みでないことを確認
+        if ($question->best_answer_id !== null) {
+            return back()->with('error', 'この質問は既に解決済みです。');
         }
 
-        // ベストアンサーIDを更新
+        // 選ばれた回答がこの質問に属していることを確認
+        if ($answer->question_id !== $question->id) {
+            return back()->with('error', '選ばれた回答はこの質問に属していません。');
+        }
+
+        // ベストアンサーを設定
         $question->best_answer_id = $answer->id;
-        $question->is_resolved = true;
         $question->save();
 
         return back()->with('success', 'ベストアンサーが選ばれました！');
