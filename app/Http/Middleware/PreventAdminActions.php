@@ -16,6 +16,8 @@ class PreventAdminActions
      */
     public function handle(Request $request, Closure $next): Response
     {
+        //dd('PreventAdminActions middleware is running. User is admin: ' . (Auth::check() && Auth::user()->is_admin ? 'true' : 'false'));
+
         // 認証済みユーザーが管理者である場合、アクションを許可しない
         if (Auth::check() && Auth::user()->isAdmin()) {
             // 管理ユーザーはこれらのアクションを実行できない旨のメッセージを表示してリダイレクト

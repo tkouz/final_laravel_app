@@ -32,10 +32,14 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\Session\Middleware\AuthenticateSession::class,
+            // ★修正: AuthenticateSession::class を削除 (コメントアウトのままでOK)
+            // \Illuminate\Session\Middleware\AuthenticateSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            // 'auth' ミドルウェアは 'web' グループの後に実行されるルートミドルウェアとして定義されているため、
+            // ここに直接追加する必要はありません。
+            // ルート定義で 'auth' ミドルウェアが適用されていれば、Authenticate.phpが実行されます。
         ],
 
         'api' => [
@@ -63,8 +67,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class, // 既存の管理者ミドルウェア
-        // ★ここを削除
-        // 'prevent.admin.actions' => \App\Http\Middleware\PreventAdminActions::class,
-        // ★ここまで削除
+        // ★ここを追加: PreventAdminActionsミドルウェアのエイリアス登録
+        'prevent.admin.actions' => \App\Http\Middleware\PreventAdminActions::class,
     ];
 }

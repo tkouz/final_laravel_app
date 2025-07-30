@@ -11,13 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // ここにミドルウェアを登録
-        $middleware->alias([
-            'admin' => \App\Http\Middleware\AdminMiddleware::class, // ★この行を追加
-        ]);
-
-        // 必要であれば、グローバルミドルウェアやグループミドルウェアもここで設定
+        //
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        // ...
+        //
     })->create();
+
