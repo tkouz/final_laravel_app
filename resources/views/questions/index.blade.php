@@ -12,26 +12,31 @@
                 <div class="p-6 text-gray-900">
                     {{-- 検索フォーム --}}
                     <form action="{{ route('questions.index') }}" method="GET" class="mb-6 space-y-4 md:space-y-0 md:flex md:items-center md:space-x-4">
-                        <input type="text" name="search" placeholder="キーワードで検索..." value="{{ $searchQuery }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto flex-grow">
+                        {{-- 変更: name="search" -> name="keyword" --}}
+                        <input type="text" name="keyword" placeholder="キーワードで検索..." value="{{ $searchQuery }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto flex-grow">
 
                         {{-- 投稿日時フィルター --}}
                         <div class="flex items-center space-x-2 w-full md:w-auto">
                             <label for="date_filter" class="text-sm text-gray-700 whitespace-nowrap">投稿日時（以降）:</label>
-                            <input type="date" name="date_filter" id="date_filter" value="{{ request('date_filter') }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full">
+                            {{-- 変更: name="date_filter" -> name="posted_at" --}}
+                            <input type="date" name="posted_at" id="date_filter" value="{{ request('posted_at') }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full">
                         </div>
 
-                        <select name="status_filter" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
+                        {{-- 変更: name="status_filter" -> name="status" --}}
+                        <select name="status" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
                             <option value="all" {{ $statusFilter == 'all' ? 'selected' : '' }}>全て</option>
-                            <option value="open" {{ $statusFilter == 'open' ? 'selected' : '' }}>未解決</option>
+                            {{-- 変更: 'open' -> 'unresolved' に統一 --}}
+                            <option value="unresolved" {{ $statusFilter == 'unresolved' ? 'selected' : '' }}>未解決</option>
                             <option value="resolved" {{ $statusFilter == 'resolved' ? 'selected' : '' }}>解決済み</option>
                         </select>
-                        <select name="sort_by" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
+                        {{-- 変更: name="sort_by" -> name="sort" --}}
+                        <select name="sort" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
                             <option value="latest" {{ $sortBy == 'latest' ? 'selected' : '' }}>新しい順</option>
                             <option value="oldest" {{ $sortBy == 'oldest' ? 'selected' : '' }}>古い順</option>
-                            <option value="most_answers" {{ $sortBy == 'most_answers' ? 'selected' : '' }}>回答数が多い順</option>
-                            {{-- ★ここから追加 --}}
-                            <option value="popular" {{ $sortBy == 'popular' ? 'selected' : '' }}>いいねが多い順</option>
-                            {{-- ★ここまで追加 --}}
+                            {{-- 変更: 'most_answers' -> 'answers_desc' に統一 --}}
+                            <option value="answers_desc" {{ $sortBy == 'answers_desc' ? 'selected' : '' }}>回答数が多い順</option>
+                            {{-- 変更: 'popular' -> 'likes_desc' に統一 --}}
+                            <option value="likes_desc" {{ $sortBy == 'likes_desc' ? 'selected' : '' }}>いいねが多い順</option>
                         </select>
                         <x-primary-button type="submit" class="w-full md:w-auto">{{ __('検索・絞り込み') }}</x-primary-button>
                         <a href="{{ route('questions.index') }}" class="inline-flex items-center justify-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:bg-gray-300 active:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150 w-full md:w-auto">
@@ -39,6 +44,7 @@
                         </a>
                     </form>
 
+                    {{-- 質問一覧の表示部分は変更なし --}}
                     @forelse ($questions as $question)
                         <div class="bg-gray-50 p-4 rounded-lg shadow-sm mb-4">
                             <h3 class="text-lg font-semibold text-gray-800">
@@ -49,7 +55,6 @@
                             <p class="text-gray-600 text-sm">
                                 投稿者: {{ $question->user->name }} - {{ $question->created_at->diffForHumans() }}
                                 <span class="ml-2">回答数: {{ $question->answers_count }}</span>
-                                {{-- ★いいね数の表示を likes_count を優先するように修正 --}}
                                 <span class="ml-2">いいね数: {{ $question->likes_count ?? $question->likes->count() }}</span>
                                 @if ($question->is_resolved)
                                     <span class="ml-2 px-2 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">解決済み</span>
@@ -57,7 +62,6 @@
                             </p>
                             <p class="mt-2 text-gray-700 text-sm">{{ Str::limit($question->body, 150) }}</p>
 
-                            {{-- 質問画像表示 --}}
                             @if ($question->image_path)
                                 <div class="mt-2">
                                     <img src="{{ Storage::url($question->image_path) }}" alt="質問画像" class="max-w-full h-auto rounded-lg shadow-md">
@@ -67,44 +71,43 @@
                             <div class="mt-4 flex items-center justify-end space-x-2">
                                 {{-- いいね！ボタン --}}
                                 @auth
-                                    <button
-                                        id="like-button-{{ $question->id }}"
-                                        data-question-id="{{ $question->id }}"
-                                        data-liked="{{ $question->isLikedByUser(Auth::user()) ? 'true' : 'false' }}"
-                                        class="like-button inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
-                                                {{ $question->isLikedByUser(Auth::user()) ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
-                                                focus:outline-none transition ease-in-out duration-150"
-                                    >
-                                        <span id="like-icon-{{ $question->id }}" class="mr-1">
-                                            {{ $question->isLikedByUser(Auth::user()) ? '❤️' : '🤍' }}
-                                        </span>
-                                        いいね！
-                                    </button>
+                                <button
+                                    id="like-button-{{ $question->id }}"
+                                    data-question-id="{{ $question->id }}"
+                                    data-liked="{{ $question->isLikedByUser(Auth::user()) ? 'true' : 'false' }}"
+                                    class="like-button inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
+                                            {{ $question->isLikedByUser(Auth::user()) ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
+                                            focus:outline-none transition ease-in-out duration-150"
+                                >
+                                    <span id="like-icon-{{ $question->id }}" class="mr-1">
+                                        {{ $question->isLikedByUser(Auth::user()) ? '❤️' : '🤍' }}
+                                    </span>
+                                    いいね！
+                                </button>
                                 @else
                                     <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
                                         🤍 いいね！
                                     </span>
                                 @endauth
-                                {{-- ★いいね数の表示部分も likes_count を優先するように修正 --}}
                                 <span id="like-count-{{ $question->id }}" class="text-gray-600 text-sm">
                                     {{ $question->likes_count ?? $question->likes->count() }}
                                 </span>
 
                                 {{-- ブックマークボタン --}}
                                 @auth
-                                    <button
-                                        id="bookmark-button-{{ $question->id }}"
-                                        data-question-id="{{ $question->id }}"
-                                        data-bookmarked="{{ $question->isBookmarkedByUser(Auth::user()) ? 'true' : 'false' }}"
-                                        class="bookmark-button inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
-                                                {{ $question->isBookmarkedByUser(Auth::user()) ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
-                                                focus:outline-none transition ease-in-out duration-150"
-                                    >
-                                        <span id="bookmark-icon-{{ $question->id }}" class="mr-1">
-                                            {{ $question->isBookmarkedByUser(Auth::user()) ? '🔖' : '📑' }}
-                                        </span>
-                                        ブックマーク
-                                    </button>
+                                <button
+                                    id="bookmark-button-{{ $question->id }}"
+                                    data-question-id="{{ $question->id }}"
+                                    data-bookmarked="{{ $question->isBookmarkedByUser(Auth::user()) ? 'true' : 'false' }}"
+                                    class="bookmark-button inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md
+                                            {{ $question->isBookmarkedByUser(Auth::user()) ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300' }}
+                                            focus:outline-none transition ease-in-out duration-150"
+                                >
+                                    <span id="bookmark-icon-{{ $question->id }}" class="mr-1">
+                                        {{ $question->isBookmarkedByUser(Auth::user()) ? '🔖' : '📑' }}
+                                    </span>
+                                    ブックマーク
+                                </button>
                                 @else
                                     <span class="inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 text-sm leading-4 font-medium rounded-md">
                                         📑 ブックマーク

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage; // Storageファサードをuse
 use Illuminate\Http\RedirectResponse; // RedirectResponseをuse
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests; // ★追加: AuthorizesRequestsトレイトをuse
+use Carbon\Carbon;
 
 class QuestionController extends Controller
 {
@@ -38,22 +39,14 @@ class QuestionController extends Controller
         }
 
         // 投稿日時フィルター
-        if ($request->filled('posted_at')) {
-            $postedAt = $request->input('posted_at');
-            switch ($postedAt) {
-                case 'today':
-                    $query->whereDate('created_at', today());
-                    break;
-                case 'week':
-                    $query->whereBetween('created_at', [now()->subWeek(), now()]);
-                    break;
-                case 'month':
-                    $query->whereBetween('created_at', [now()->subMonth(), now()]);
-                    break;
-                case 'year':
-                    $query->whereBetween('created_at', [now()->subYear(), now()]);
-                    break;
+        if ($request->filled('status')) {
+            $status = $request->input('status');
+            if ($status === 'resolved') {
+                $query->whereNotNull('best_answer_id');
+            } elseif ($status === 'unresolved') { // Bladeの 'open' から 'unresolved' に変更
+                $query->whereNull('best_answer_id');
             }
+            // 'all' の場合は何もしない（フィルタリングしない）
         }
 
         // ステータスフィルター (解決済み/未解決)
@@ -71,16 +64,15 @@ class QuestionController extends Controller
             $query->orderBy('created_at', 'desc');
         } elseif ($sortBy === 'oldest') {
             $query->orderBy('created_at', 'asc');
-        } elseif ($sortBy === 'answers_desc') {
-            // 回答数でソートするために、answers_countをロード
+        } elseif ($sortBy === 'answers_desc') { // Bladeの 'most_answers' から 'answers_desc' に変更
             $query->withCount('answers')->orderBy('answers_count', 'desc');
-        } elseif ($sortBy === 'likes_desc') {
-            // いいね数でソートするために、likes_countをロード
+        } elseif ($sortBy === 'likes_desc') { // Bladeの 'popular' から 'likes_desc' に変更
             $query->withCount('likes')->orderBy('likes_count', 'desc');
         }
 
-        $questions = $query->paginate(10); // 1ページ10件でページネーション
+        $questions = $query->paginate(10);
 
+        // Bladeに渡す変数名もコントローラーが受け取ったものに合わせる
         return view('questions.index', compact('questions', 'searchQuery', 'statusFilter', 'sortBy'));
     }
 
