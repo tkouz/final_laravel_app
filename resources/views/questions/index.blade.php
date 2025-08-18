@@ -1,4 +1,5 @@
 {{-- resources/views/questions/index.blade.php --}}
+
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -11,31 +12,27 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     {{-- 検索フォーム --}}
+                    {{-- 修正: formのクラスを調整し、日付フィルターを正しく表示 --}}
                     <form action="{{ route('questions.index') }}" method="GET" class="mb-6 space-y-4 md:space-y-0 md:flex md:items-center md:space-x-4">
-                        {{-- 変更: name="search" -> name="keyword" --}}
                         <input type="text" name="keyword" placeholder="キーワードで検索..." value="{{ $searchQuery }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto flex-grow">
 
-                        {{-- 投稿日時フィルター --}}
+                        {{-- 日付フィルター --}}
                         <div class="flex items-center space-x-2 w-full md:w-auto">
                             <label for="date_filter" class="text-sm text-gray-700 whitespace-nowrap">投稿日時（以降）:</label>
-                            {{-- 変更: name="date_filter" -> name="posted_at" --}}
-                            <input type="date" name="posted_at" id="date_filter" value="{{ request('posted_at') }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full">
+                            {{-- 修正: name属性をdate_filterに変更 --}}
+                            <input type="date" name="date_filter" id="date_filter" value="{{ $dateFilter ?? '' }}" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full">
                         </div>
 
-                        {{-- 変更: name="status_filter" -> name="status" --}}
                         <select name="status" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
-                            <option value="all" {{ $statusFilter == 'all' ? 'selected' : '' }}>全て</option>
-                            {{-- 変更: 'open' -> 'unresolved' に統一 --}}
+                            <option value="">すべて</option>
                             <option value="unresolved" {{ $statusFilter == 'unresolved' ? 'selected' : '' }}>未解決</option>
                             <option value="resolved" {{ $statusFilter == 'resolved' ? 'selected' : '' }}>解決済み</option>
                         </select>
-                        {{-- 変更: name="sort_by" -> name="sort" --}}
+                        
                         <select name="sort" class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full md:w-auto">
                             <option value="latest" {{ $sortBy == 'latest' ? 'selected' : '' }}>新しい順</option>
                             <option value="oldest" {{ $sortBy == 'oldest' ? 'selected' : '' }}>古い順</option>
-                            {{-- 変更: 'most_answers' -> 'answers_desc' に統一 --}}
                             <option value="answers_desc" {{ $sortBy == 'answers_desc' ? 'selected' : '' }}>回答数が多い順</option>
-                            {{-- 変更: 'popular' -> 'likes_desc' に統一 --}}
                             <option value="likes_desc" {{ $sortBy == 'likes_desc' ? 'selected' : '' }}>いいねが多い順</option>
                         </select>
                         <x-primary-button type="submit" class="w-full md:w-auto">{{ __('検索・絞り込み') }}</x-primary-button>
@@ -121,7 +118,13 @@
                     @endforelse
 
                     <div class="mt-4">
-                        {{ $questions->links() }}
+                        {{-- 修正: appendsメソッドにdate_filterを追加 --}}
+                        {{ $questions->appends([
+                            'keyword' => $searchQuery,
+                            'status' => $statusFilter,
+                            'date_filter' => $dateFilter,
+                            'sort' => $sortBy
+                        ])->links() }}
                     </div>
                 </div>
             </div>

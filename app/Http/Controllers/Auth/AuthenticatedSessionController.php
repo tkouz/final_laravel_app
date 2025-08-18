@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use App\Models\User; // ★追加: Userモデルをuse
 
 class AuthenticatedSessionController extends Controller
 {
@@ -27,6 +28,18 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+
+        // ★★★ここから追加★★★
+        // ログインしたユーザーが is_active が false (0) でないかを確認
+        $user = Auth::user();
+        if ($user && !$user->is_active) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect('/login')->with('status', 'あなたのアカウントは現在利用停止されています。');
+        }
+        // ★★★ここまで追加★★★
 
         return redirect()->intended(route('questions.index', absolute: false));
     }
