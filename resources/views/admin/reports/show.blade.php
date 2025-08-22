@@ -1,101 +1,101 @@
-{{-- resources/views/admin/reports/show.blade.php --}}
-
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('違反報告詳細') }}
-        </h2>
-    </x-slot>
-
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">違反報告 #{{ $report->id }}</h3>
+                <div class="p-6 bg-white border-b border-gray-200">
 
-                    {{-- 成功メッセージの表示 --}}
-                    @if (session('success'))
-                        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <span class="block sm:inline">{{ session('success') }}</span>
-                        </div>
-                    @endif
-                    {{-- エラーメッセージの表示 --}}
-                    @if (session('error'))
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                            <span class="block sm:inline">{{ session('error') }}</span>
-                        </div>
-                    @endif
+                    {{-- 報告詳細の表示 --}}
+                    <h2 class="text-2xl font-bold mb-4">報告詳細</h2>
 
                     <div class="mb-4">
-                        <p class="text-sm text-gray-600">報告日時: {{ $report->created_at->format('Y/m/d H:i') }}</p>
-                        <p class="text-sm text-gray-600">報告者: {{ $report->user->name ?? '不明なユーザー' }}</p>
-                        <p class="text-sm text-gray-600">報告理由: {{ $report->reason }}</p>
-                        @if ($report->comment)
-                            <p class="text-sm text-gray-600">コメント: {{ $report->comment }}</p>
-                        @endif
-                        <p class="text-sm text-gray-600">ステータス: {{ $report->status }}</p>
-                        <p class="text-sm text-gray-600">この報告対象の合計報告数: {{ $totalReportCount }} 件</p> {{-- ★追加 --}}
+                        <p><strong>報告ID:</strong> {{ $report->id }}</p>
+                        <p><strong>報告者:</strong> <a href="{{ route('admin.users.index', ['user_id' => $report->reporter->id]) }}" class="text-blue-500 hover:text-blue-700">{{ $report->reporter->name }}</a></p>
+                        <p><strong>報告された投稿タイプ:</strong>
+                            @if ($report->reportable_type === 'App\Models\Answer')
+                                回答
+                            @elseif ($report->reportable_type === 'App\Models\Question')
+                                質問
+                            @else
+                                不明
+                            @endif
+                        </p>
+                        <p><strong>報告された理由:</strong> {{ $report->reason }}</p>
+                        <p><strong>報告日時:</strong> {{ $report->created_at->format('Y/m/d H:i') }}</p>
                     </div>
 
-                    <div class="mb-6">
-                        <h4 class="text-md font-medium text-gray-800 mb-2">報告対象の投稿</h4>
-                        @if ($report->reportable)
-                            <div class="border p-4 rounded-lg bg-gray-50">
-                                @if ($report->reportable_type === App\Models\Question::class)
-                                    <p class="text-sm text-gray-600">タイプ: 質問</p>
-                                    <p class="text-lg font-semibold">{{ $report->reportable->title }}</p>
-                                    <p class="text-gray-700">{{ $report->reportable->body }}</p>
-                                    @if ($report->reportable->image_path)
-                                        <div class="mt-2">
-                                            <img src="{{ asset('storage/' . $report->reportable->image_path) }}" alt="質問画像" class="max-w-xs h-auto rounded">
-                                        </div>
+                    {{-- 報告された投稿内容の表示 --}}
+                    @if ($report->reportable)
+                        <div class="border-t border-gray-200 pt-4">
+                            <h3 class="text-xl font-semibold mb-2">報告された投稿内容</h3>
+                            <div class="prose max-w-none">
+                                <p class="text-gray-600 mb-2"><strong>投稿者:</strong> <a href="{{ route('admin.users.index', ['user_id' => $report->reportable->user->id]) }}" class="text-blue-500 hover:text-blue-700">{{ $report->reportable->user->name }}</a></p>
+                                <p class="text-gray-800">
+                                    {{ $report->reportable->content }}
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- 管理者用「表示停止/表示する」ボタン --}}
+                        @if (Auth::user()->isAdmin())
+                            <div class="mt-4 flex space-x-2">
+                                @if ($report->reportable_type === 'App\Models\Answer')
+                                    {{-- 回答の場合の表示/非表示ボタン --}}
+                                    @if ($report->reportable->is_hidden)
+                                        <form action="{{ route('admin.answers.unhide', $report->reportable) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
+                                                回答を表示する
+                                            </button>
+                                        </form>
+                                    @else
+                                        <form action="{{ route('admin.answers.hide', $report->reportable) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 active:bg-red-900 focus:outline-none focus:border-red-900 focus:ring ring-red-300 disabled:opacity-25 transition ease-in-out duration-150">
+                                                回答を非表示にする
+                                            </button>
+                                        </form>
                                     @endif
-                                    <p class="text-sm text-gray-600 mt-2">現在の表示状態: {{ $report->reportable->is_visible ? '表示中' : '非表示' }}</p>
-                                    <a href="{{ route('questions.show', $report->reportable->id) }}" class="text-indigo-600 hover:text-indigo-900 mt-2 inline-block">質問詳細を見る</a>
-                                @elseif ($report->reportable_type === App\Models\Answer::class)
-                                    <p class="text-sm text-gray-600">タイプ: 回答</p>
-                                    <p class="text-gray-700">{{ $report->reportable->content }}</p>
-                                    @if ($report->reportable->image_path)
-                                        <div class="mt-2">
-                                            <img src="{{ asset('storage/' . $report->reportable->image_path) }}" alt="回答画像" class="max-w-xs h-auto rounded">
-                                        </div>
+                                @elseif ($report->reportable_type === 'App\Models\Question')
+                                    {{-- 質問の場合の表示/非表示ボタン --}}
+                                    @if ($report->reportable->is_hidden)
+                                        <form action="{{ route('admin.questions.unhide', $report->reportable) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700 active:bg-green-900 focus:outline-none focus:border-green-900 focus:ring ring-green-300 disabled:opacity-25 transition ease-in-out duration-150">
+                                                質問を表示する
+                                            </button>
+                                        </form>
+                                    @else
+                                        <form action="{{ route('admin.questions.hide', $report->reportable) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700 active:bg-red-900 focus:outline-none focus:border-red-900 focus:ring ring-red-300 disabled:opacity-25 transition ease-in-out duration-150">
+                                                質問を非表示にする
+                                            </button>
+                                        </form>
                                     @endif
-                                    <p class="text-sm text-gray-600 mt-2">現在の表示状態: {{ $report->reportable->is_visible ? '表示中' : '非表示' }}</p>
-                                    <a href="{{ route('questions.show', $report->reportable->question_id) }}#answer-{{ $report->reportable->id }}" class="text-indigo-600 hover:text-indigo-900 mt-2 inline-block">回答詳細を見る</a>
-                                @else
-                                    <p>報告対象の投稿が見つからないか、不明なタイプです。</p>
                                 @endif
                             </div>
-                        @else
-                            <p class="text-gray-700">この違反報告の対象投稿は既に削除されています。</p>
                         @endif
-                    </div>
+                    @else
+                        <p class="mt-4 text-red-500">この報告に関連する投稿は見つかりませんでした。</p>
+                    @endif
 
-                    <div class="flex items-center space-x-4">
-                        {{-- 投稿の表示停止/再開ボタン --}}
-                        @if ($report->reportable)
-                            <form action="{{ route('admin.reports.toggleVisibility', ['type' => $report->reportable_type === App\Models\Question::class ? 'question' : 'answer', 'id' => $report->reportable->id]) }}" method="POST" onsubmit="return confirm('本当にこの投稿の表示状態を切り替えますか？');">
-                                @csrf
-                                @method('POST')
-                                <button type="submit" class="px-4 py-2 rounded-md {{ $report->reportable->is_visible ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600' }} text-white">
-                                    {{ $report->reportable->is_visible ? '投稿を非表示にする' : '投稿を表示する' }}
-                                </button>
-                            </form>
-                        @endif
+                    <div class="mt-8 flex justify-between">
+                        <a href="{{ route('admin.reports.index') }}" class="text-blue-500 hover:text-blue-700">← 報告一覧に戻る</a>
 
-                        {{-- 違反報告の削除ボタン --}}
-                        <form action="{{ route('admin.reports.destroy', $report->id) }}" method="POST" onsubmit="return confirm('本当にこの違反報告を削除しますか？');">
+                        {{-- 報告を削除するボタン --}}
+                        <form action="{{ route('admin.reports.destroy', $report->id) }}" method="POST" onsubmit="return confirm('本当にこの報告を削除しますか？');">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="px-4 py-2 rounded-md bg-gray-500 hover:bg-gray-600 text-white">
-                                違反報告を削除
+                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-800 uppercase tracking-widest hover:bg-gray-300 active:bg-gray-400 focus:outline-none focus:border-gray-400 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
+                                この報告を削除
                             </button>
                         </form>
-
-                        <a href="{{ route('admin.reports.index') }}" class="px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-600 text-white">
-                            一覧に戻る
-                        </a>
                     </div>
+
                 </div>
             </div>
         </div>

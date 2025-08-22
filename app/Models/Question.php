@@ -25,7 +25,8 @@ class Question extends Model
         'image_path',
         'is_resolved',
         'best_answer_id',
-        'is_visible', // ★追加: 投稿の表示/非表示フラグ
+        'is_visible',
+        'is_hidden', // ★追加: 投稿の表示/非表示フラグ
     ];
 
     /**

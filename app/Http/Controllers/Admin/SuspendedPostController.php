@@ -16,11 +16,12 @@ class SuspendedPostController extends Controller
      */
     public function indexQuestions()
     {
-        // is_visibleがfalseの質問のみを取得し、ページネーション
+        // is_hiddenがtrueの質問のみを取得し、ページネーション
+        // ユーザー名を表示するためにuserリレーションをロード
         $suspendedQuestions = Question::with('user')
-                                      ->where('is_visible', false)
-                                      ->orderBy('updated_at', 'desc') // 最新の更新順に表示
-                                      ->paginate(10);
+                                     ->where('is_hidden', true)
+                                     ->orderBy('updated_at', 'desc') // 最新の更新順に表示
+                                     ->paginate(10);
 
         return view('admin.suspended-posts.questions', compact('suspendedQuestions'));
     }
@@ -32,10 +33,10 @@ class SuspendedPostController extends Controller
      */
     public function indexAnswers()
     {
-        // is_visibleがfalseの回答のみを取得し、ページネーション
+        // is_hiddenがtrueの回答のみを取得し、ページネーション
         // 回答がどの質問に属しているか分かるように質問もロード
         $suspendedAnswers = Answer::with('user', 'question')
-                                  ->where('is_visible', false)
+                                  ->where('is_hidden', true)
                                   ->orderBy('updated_at', 'desc') // 最新の更新順に表示
                                   ->paginate(10);
 

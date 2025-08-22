@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Report;
 use App\Models\Question;
 use App\Models\Answer;
-use App\Models\User; // Userモデルをuse
-use Illuminate\Support\Facades\DB; // DBファサードをuse
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -23,34 +23,33 @@ class ReportController extends Controller
 
         // 各reportable_idとreportable_typeの組み合わせに対する報告数をサブクエリで取得
         $reports = $reports->select('reports.*')
-                           ->addSelect(DB::raw('COUNT(t2.id) as total_report_count')) // t2はサブクエリのエイリアス
+                           ->addSelect(DB::raw('COUNT(t2.id) as total_report_count'))
                            ->leftJoin('reports as t2', function ($join) {
                                $join->on('reports.reportable_id', '=', 't2.reportable_id')
                                     ->on('reports.reportable_type', '=', 't2.reportable_type');
                            })
-                           ->groupBy('reports.id') // 各報告はユニークなのでreports.idでグループ化
-                           ->with(['user', 'reportable']) // 報告者と報告対象をロード
-                           ->orderByDesc('total_report_count') // 合計報告数の降順でソート
-                           ->orderByDesc('reports.created_at') // 合計報告数が同じ場合は作成日時の新しい順
-                           ->paginate(10); // ページネーション
+                           ->groupBy('reports.id')
+                           ->with(['user', 'reportable'])
+                           ->orderByDesc('total_report_count')
+                           ->orderByDesc('reports.created_at')
+                           ->paginate(10);
 
         return view('admin.reports.index', compact('reports'));
     }
-
 
     /**
      * 指定された違反報告の詳細を表示します。
      */
     public function show(Report $report)
     {
-        $report->load(['user', 'reportable']); // 報告者と報告対象をロード
+        $report->load(['user', 'reportable']);
 
         // 報告対象の合計違反報告数を取得
         $totalReportCount = 0;
         if ($report->reportable) {
             $totalReportCount = Report::where('reportable_id', $report->reportable_id)
-                                      ->where('reportable_type', $report->reportable_type)
-                                      ->count();
+                                     ->where('reportable_type', $report->reportable_type)
+                                     ->count();
         }
 
         return view('admin.reports.show', compact('report', 'totalReportCount'));
@@ -64,33 +63,99 @@ class ReportController extends Controller
         $report->delete();
         return redirect()->route('admin.reports.index')->with('success', '違反報告を削除しました。');
     }
-
+    
     /**
-     * 質問または回答の表示状態を切り替えます。
+     * 非表示の質問一覧を表示します。
      */
-    public function toggleVisibility(Request $request, string $type, int $id)
+    public function suspendedQuestions()
     {
-        $model = null;
-        if ($type === 'question') {
-            $model = Question::find($id);
-        } elseif ($type === 'answer') {
-            $model = Answer::find($id);
-        }
+        $suspendedQuestions = Question::where('is_hidden', 1)
+            ->with('user')
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10);
 
-        if (!$model) {
-            return back()->with('error', '対象の投稿が見つかりませんでした。');
-        }
-
-        $model->is_visible = !$model->is_visible;
-        $model->save();
-
-        return back()->with('success', '投稿の表示状態を切り替えました。');
+        return view('admin.suspended-posts.questions', compact('suspendedQuestions'));
     }
 
     /**
-     * ユーザーの利用状態を切り替えます。
-     * Admin/UserController に移動したので、ここでは不要ですが、
-     * 念のため残しておきます（実際には使われません）。
+     * 指定された質問を非表示にします。
+     */
+    public function hideQuestion(Request $request, Question $question)
+    {
+        // updateメソッドを使用して非表示状態を更新
+        $question->update(['is_hidden' => true]);
+        return back()->with('success', '質問を非表示にしました。');
+    }
+
+    /**
+     * 指定された質問を表示状態に戻します。
+     */
+    public function unhideQuestion(Request $request, Question $question)
+    {
+        // updateメソッドを使用して表示状態を更新
+        $question->update(['is_hidden' => false]);
+        return back()->with('success', '質問を表示状態に戻しました。');
+    }
+    
+    /**
+     * 非表示の回答一覧を表示します。
+     */
+    public function suspendedAnswers()
+    {
+        $suspendedAnswers = Answer::where('is_hidden', 1)
+            ->with(['user', 'question'])
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10);
+
+        return view('admin.suspended-posts.answers', compact('suspendedAnswers'));
+    }
+
+    /**
+     * 指定された回答を非表示にします。
+     */
+    public function hideAnswer(Request $request, Answer $answer)
+    {
+        // updateメソッドを使用して非表示状態を更新
+        $answer->update(['is_hidden' => true]);
+        return back()->with('success', '回答を非表示にしました。');
+    }
+
+    /**
+     * 指定された回答を表示状態に戻します。
+     */
+    public function unhideAnswer(Request $request, Answer $answer)
+    {
+        // updateメソッドを使用して表示状態を更新
+        $answer->update(['is_hidden' => false]);
+        return back()->with('success', '回答を表示状態に戻しました。');
+    }
+
+    /**
+     * 質問または回答の表示状態を切り替えます。
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Question|\App\Models\Answer $reportable
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function toggleVisibility(Request $request, $reportableType, $reportableId)
+    {
+        $model = null;
+        if ($reportableType === 'question') {
+            $model = Question::find($reportableId);
+        } elseif ($reportableType === 'answer') {
+            $model = Answer::find($reportableId);
+        }
+
+        if ($model) {
+            $model->update(['is_hidden' => !$model->is_hidden]);
+            return back()->with('success', '投稿の表示状態を切り替えました。');
+        }
+
+        return back()->with('error', '投稿が見つかりませんでした。');
+    }
+
+    /**
+     * ユーザーの利用状態を切り替えます。（このメソッドは実際には使われません）
      */
     // public function toggleUserActive(User $user)
     // {

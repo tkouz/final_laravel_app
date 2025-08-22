@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Question; // Questionモデルをuse
-use App\Models\Answer;   // Answerモデルをuse
-use App\Models\User;     // Userモデルをuse
-use App\Models\Report;   // Reportモデルをuse
+use App\Models\Answer; // Answerモデルをuse
+use App\Models\User; // Userモデルをuse
+use App\Models\Report; // Reportモデルをuse
 use Illuminate\Support\Facades\DB; // DBファサードをuse (集計クエリ用)
 
 class DashboardController extends Controller
@@ -17,15 +17,15 @@ class DashboardController extends Controller
         // 1. 質問一覧（違反報告数の多い順（降順）に10件）
         // まず、表示可能な質問に対する違反報告の数を集計
         $topReportedQuestionsData = Report::select('reports.reportable_id', DB::raw('count(reports.id) as report_count'))
-                                      ->join('questions', function ($join) {
-                                          $join->on('reports.reportable_id', '=', 'questions.id')
-                                               ->where('reports.reportable_type', Question::class)
-                                               ->where('questions.is_visible', true); // is_visible が true の質問のみ
-                                      })
-                                      ->groupBy('reports.reportable_id')
-                                      ->orderByDesc('report_count')
-                                      ->limit(10)
-                                      ->get();
+                                    ->join('questions', function ($join) {
+                                        $join->on('reports.reportable_id', '=', 'questions.id')
+                                            ->where('reports.reportable_type', Question::class)
+                                            ->where('questions.is_hidden', false); // is_hidden が false の質問のみ
+                                    })
+                                    ->groupBy('reports.reportable_id')
+                                    ->orderByDesc('report_count')
+                                    ->limit(10)
+                                    ->get();
 
         // 取得したreportable_idを使って、実際のQuestionモデルをロード
         $questionIds = $topReportedQuestionsData->pluck('reportable_id');
@@ -50,8 +50,8 @@ class DashboardController extends Controller
         $topReportedAnswersData = Report::select('reports.reportable_id', DB::raw('count(reports.id) as report_count'))
                                     ->join('answers', function ($join) {
                                         $join->on('reports.reportable_id', '=', 'answers.id')
-                                             ->where('reports.reportable_type', Answer::class)
-                                             ->where('answers.is_visible', true); // is_visible が true の回答のみ
+                                            ->where('reports.reportable_type', Answer::class)
+                                            ->where('answers.is_hidden', false); // is_hidden が false の回答のみ
                                     })
                                     ->groupBy('reports.reportable_id')
                                     ->orderByDesc('report_count')
@@ -77,12 +77,12 @@ class DashboardController extends Controller
 
 
         // 3. ユーザー一覧（質問・回答の停止件数の多い順（降順）に10件）
-        // 各ユーザーが投稿した質問と回答のうち、is_visible=false の件数を集計します。
+        // 各ユーザーが投稿した質問と回答のうち、is_hidden=true の件数を集計します。
         $topSuspendedUsers = User::withCount(['questions' => function ($query) {
-                                        $query->where('is_visible', false);
+                                        $query->where('is_hidden', true);
                                     }])
                                     ->withCount(['answers' => function ($query) {
-                                        $query->where('is_visible', false);
+                                        $query->where('is_hidden', true);
                                     }])
                                     ->get()
                                     ->sortByDesc(function ($user) {

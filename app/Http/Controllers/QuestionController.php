@@ -1,37 +1,39 @@
 <?php
 
+// app/Http/Controllers/QuestionController.php
+
 namespace App\Http\Controllers;
 
 use App\Models\Question;
-use App\Models\Answer; // Answerモデルをuse
+use App\Models\Answer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage; // Storageファサードをuse
-use Illuminate\Http\RedirectResponse; // RedirectResponseをuse
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests; // AuthorizesRequestsトレイトをuse
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Carbon\Carbon;
 
 class QuestionController extends Controller
 {
-    use AuthorizesRequests; // AuthorizesRequestsトレイトを使用
+    use AuthorizesRequests;
 
     /**
      * 質問一覧を表示します。
      */
     public function index(Request $request)
     {
-        // Questionモデルのクエリを開始
+        // 修正点: withCount('answers')を追加して回答数をカウント
         $query = Question::with('user', 'answers', 'likes')
-            ->where('is_visible', true); // is_visibleがtrueの質問のみ表示
+            ->withCount('answers') // この行を追加
+            ->where('is_visible', true);
 
         $searchQuery = $request->input('keyword');
         $statusFilter = $request->input('status');
-        $dateFilter = $request->input('date_filter'); // 日付フィルターの値を取得
-        $sortBy = $request->input('sort', 'latest'); // ソート順の値を取得 (デフォルトは'latest')
+        $dateFilter = $request->input('date_filter');
+        $sortBy = $request->input('sort', 'latest');
 
-        // キーワード検索
         if ($request->filled('keyword')) {
             $keyword = $request->input('keyword');
             $query->where(function ($q) use ($keyword) {
@@ -40,7 +42,6 @@ class QuestionController extends Controller
             });
         }
 
-        // ステータスフィルター (解決済み/未解決)
         if ($request->filled('status')) {
             $status = $request->input('status');
             if ($status === 'resolved') {
@@ -50,26 +51,22 @@ class QuestionController extends Controller
             }
         }
 
-        // === 修正点: 日付フィルターを追加 ===
-        // もし 'date_filter' が存在すれば、その日付以降でcreated_atを絞り込む
         if ($dateFilter) {
             $query->whereDate('created_at', '>=', $dateFilter);
         }
 
-        // ソート順
         if ($sortBy === 'latest') {
             $query->orderBy('created_at', 'desc');
         } elseif ($sortBy === 'oldest') {
             $query->orderBy('created_at', 'asc');
         } elseif ($sortBy === 'answers_desc') {
-            $query->withCount('answers')->orderBy('answers_count', 'desc');
+            $query->orderBy('answers_count', 'desc');
         } elseif ($sortBy === 'likes_desc') {
             $query->withCount('likes')->orderBy('likes_count', 'desc');
         }
 
         $questions = $query->paginate(10);
 
-        // Bladeに渡す変数名もコントローラーが受け取ったものに合わせる
         return view('questions.index', compact('questions', 'searchQuery', 'statusFilter', 'sortBy', 'dateFilter'));
     }
 
@@ -104,6 +101,7 @@ class QuestionController extends Controller
             'user_id' => Auth::id(),
             'is_resolved' => false,
             'is_visible' => true,
+            'is_hidden' => false,
         ]);
 
         $question->save();
@@ -120,12 +118,25 @@ class QuestionController extends Controller
             abort(404);
         }
 
-        $question->load(['answers.user', 'answers.comments.user', 'user', 'likes']);
+        // 質問の違反報告数をカウントし、reports_count属性に追加
+        $question->reports_count = $question->reports()->count();
+        
+        // 回答それぞれの違反報告数をカウントし、reports_count属性に追加
+        // Eager Loadingされた回答にreports_countを追加
+        $question->load([
+            'answers.reports'
+        ]);
+        
+        $question->answers->each(function ($answer) {
+            $answer->reports_count = $answer->reports->count();
+        });
 
-        $isLiked = Auth::check() ? $question->isLikedByUser(Auth::user()) : false;
-        $isBookmarked = Auth::check() ? Auth::user()->bookmarks()->where('question_id', $question->id)->exists() : false;
-
-        return view('questions.show', compact('question', 'isLiked', 'isBookmarked'));
+        $isBookmarked = false;
+        if (Auth::check()) {
+            $isBookmarked = Auth::user()->bookmarks()->where('question_id', $question->id)->exists();
+        }
+        
+        return view('questions.show', compact('question', 'isBookmarked'));
     }
 
     /**

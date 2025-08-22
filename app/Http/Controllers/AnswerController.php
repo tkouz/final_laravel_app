@@ -8,6 +8,7 @@ use App\Models\Answer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Storage; // ★追加: Storageファサードをインポート
+use Illuminate\Support\Facades\Auth; // ★追加: Authファサードをインポート
 
 class AnswerController extends Controller
 {
@@ -40,7 +41,8 @@ class AnswerController extends Controller
             'question_id' => $question->id, // 回答が属する質問のID
             'content' => $validatedData['content'], // リクエストから回答内容を取得
             'image_path' => $imagePath, // 画像パスを保存
-            'is_best_answer' => false,      // デフォルトではベストアンサーではない
+            'is_best_answer' => false,  // デフォルトではベストアンサーではない
+            'is_hidden' => false,
         ]);
 
         // 回答を保存
@@ -125,5 +127,39 @@ class AnswerController extends Controller
 
         // 質問詳細ページに戻る
         return redirect()->route('questions.show', $answer->question)->with('success', '回答が削除されました！');
+    }
+
+    /**
+     * 指定された回答を非表示にします。
+     *
+     * @param  \App\Models\Answer  $answer
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function hide(Answer $answer): RedirectResponse
+    {
+        // 管理者のみが実行できるように認可チェック
+        $this->authorize('hide', $answer);
+
+        // is_visible フラグを false に更新
+        $answer->update(['is_visible' => false]);
+
+        return back()->with('success', '回答を非表示にしました。');
+    }
+
+    /**
+     * 指定された回答を再表示します。
+     *
+     * @param  \App\Models\Answer  $answer
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function unhide(Answer $answer): RedirectResponse
+    {
+        // 管理者のみが実行できるように認可チェック
+        $this->authorize('unhide', $answer);
+
+        // is_visible フラグを true に更新
+        $answer->update(['is_visible' => true]);
+
+        return back()->with('success', '回答を再表示しました。');
     }
 }

@@ -26,6 +26,21 @@ class AnswerPolicy
         return $user->id === $answer->user_id;
     }
 
-    // 必要に応じて、view, create, restore, forceDelete などのメソッドも記述
-    // 現状はupdateとdeleteのみ
+    /**
+     * 管理者が回答を非表示にできるかを判定します。
+     */
+    public function hide(User $user, Answer $answer): bool
+    {
+        // ユーザーが管理者かどうかをチェック
+        return $user->isAdmin();
+    }
+
+    /**
+     * 管理者が非表示にした回答を再表示できるかを判定します。
+     */
+    public function unhide(User $user, Answer $answer): bool
+    {
+        // ユーザーが管理者かどうかをチェック
+        return $user->isAdmin();
+    }
 }

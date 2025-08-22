@@ -12,8 +12,9 @@ use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Middleware\PreventAdminActions;
-// ★追加: SuspendedPostControllerをuse
 use App\Http\Controllers\Admin\SuspendedPostController;
+use App\Http\Controllers\Admin\AnswerController as AdminAnswerController;
+use App\Http\Controllers\Admin\QuestionController as AdminQuestionController;
 
 
 /*
@@ -34,7 +35,7 @@ Route::get('/', function () {
 
 // 質問一覧ページのルート (未認証ユーザーもアクセス可能)
 Route::get('/questions', [QuestionController::class, 'index'])
-         ->name('questions.index');
+    ->name('questions.index');
 
 // 認証済みユーザーのみがアクセスできるルートグループ
 Route::middleware(['auth', PreventAdminActions::class])->group(function () {
@@ -66,13 +67,15 @@ Route::middleware(['auth', PreventAdminActions::class])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    // あなたのカスタム画像ルート (ProfileControllerのメソッドに合わせる)
 
+    // あなたのカスタム画像ルート (ProfileControllerのメソッドに合わせる)
     Route::patch('/profile/image', [ProfileController::class, 'updateImage'])->name('profile.image.update');
     Route::delete('/profile/image', [ProfileController::class, 'deleteImage'])->name('profile.image.delete');
+    
     // ベストアンサー選定ルート
     Route::post('/questions/{question}/answers/{answer}/best', [QuestionController::class, 'markAsBestAnswer'])->name('answers.markAsBestAnswer');
 
+    // 違反報告のルート
     Route::post('/report', [ReportController::class, 'store'])->name('reports.store');
 });
 
@@ -80,30 +83,27 @@ Route::middleware(['auth', PreventAdminActions::class])->group(function () {
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     // 例: 管理者ダッシュボード
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    // ここに、ユーザー管理、質問管理、レポート管理
 
     // 違反報告管理に関するルート
-    Route::get('/reports', [AdminReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/{report}', [AdminReportController::class, 'show'])->name('reports.show');
-    Route::delete('/reports/{report}', [AdminReportController::class, 'destroy'])->name('reports.destroy');
-
-    // 投稿（質問または回答）の表示停止ルート
-    Route::post('/reports/toggle-visibility/{type}/{id}', [AdminReportController::class, 'toggleVisibility'])->name('reports.toggleVisibility');
+    Route::resource('reports', AdminReportController::class)->only(['index', 'show', 'destroy']);
+    
+    // 質問と回答の表示/非表示を切り替えるルート
+    // reportableTypeとreportableIdをURLパラメータとして渡すように変更
+    Route::put('/reports/{reportableType}/{reportableId}/toggle-visibility', [AdminReportController::class, 'toggleVisibility'])->name('reports.toggle-visibility');
 
     // ユーザー管理に関するルート
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index'); // ユーザー一覧
     Route::post('/users/{user}/toggle-active', [AdminUserController::class, 'toggleActive'])->name('users.toggleActive'); // ユーザーの利用停止/再開
 
-    // ★ここから追加: 非表示投稿管理ルート
+    // 非表示投稿管理ルート
     Route::get('/suspended-questions', [SuspendedPostController::class, 'indexQuestions'])->name('suspended-questions.index');
     Route::get('/suspended-answers', [SuspendedPostController::class, 'indexAnswers'])->name('suspended-answers.index');
-    // ★ここまで追加
 });
 
 
-// 質問詳細ページのルート (未認証ユーザーもアクセス可能) - ★注意: 認証グループの外で、かつquestions/createより後に配置
+// 質問詳細ページのルート (未認証ユーザーもアクセス可能)
 Route::get('/questions/{question}', [QuestionController::class, 'show'])
-         ->name('questions.show');
+    ->name('questions.show');
 
 // 認証関連のルートをインクルード
 require __DIR__.'/auth.php';

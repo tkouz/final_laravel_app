@@ -70,11 +70,12 @@
                                                 {{ $question->updated_at->diffForHumans() }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <form action="{{ route('admin.reports.toggleVisibility', ['type' => 'question', 'id' => $question->id]) }}" method="POST" onsubmit="return confirm('本当にこの質問の表示状態を切り替えますか？');">
+                                                {{-- ここを修正しました。ルート名をadmin.reports.toggle-visibilityに変更 --}}
+                                                <form action="{{ route('admin.reports.toggle-visibility', ['reportableType' => 'question', 'reportableId' => $question->id]) }}" method="POST">
                                                     @csrf
-                                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 shadow-sm
-                                                        {{ $question->is_visible ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-blue-700 hover:bg-blue-800 text-white' }}">
-                                                        {{ $question->is_visible ? '表示を停止する' : '表示する' }}
+                                                    @method('PUT')
+                                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 shadow-sm bg-blue-700 hover:bg-blue-800 text-white">
+                                                        表示する
                                                     </button>
                                                 </form>
                                             </td>

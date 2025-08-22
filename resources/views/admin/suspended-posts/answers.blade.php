@@ -37,10 +37,7 @@
                                             ID
                                         </th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            内容
-                                        </th>
-                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            質問タイトル
+                                            関連質問
                                         </th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             投稿者
@@ -60,20 +57,13 @@
                                                 {{ $answer->id }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                <a href="{{ route('questions.show', $answer->question_id) }}#answer-{{ $answer->id }}" class="text-indigo-600 hover:text-indigo-900">
-                                                    {{ Str::limit($answer->content, 50) }}
+                                                {{-- 回答の関連質問のタイトルを表示 --}}
+                                                <a href="{{ route('questions.show', $answer->question->id) }}" class="text-indigo-600 hover:text-indigo-900">
+                                                    {{ Str::limit($answer->question->title, 50) }}
                                                 </a>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                @if ($answer->question)
-                                                    <a href="{{ route('questions.show', $answer->question->id) }}" class="text-indigo-600 hover:text-indigo-900">
-                                                        {{ Str::limit($answer->question->title, 30) }}
-                                                    </a>
-                                                @else
-                                                    <span class="text-gray-500">質問なし</span>
-                                                @endif
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {{-- 投稿者の名前を表示 --}}
                                                 <a href="{{ route('admin.users.index') }}" class="text-indigo-600 hover:text-indigo-900">
                                                     {{ $answer->user->name }}
                                                 </a>
@@ -82,11 +72,12 @@
                                                 {{ $answer->updated_at->diffForHumans() }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <form action="{{ route('admin.reports.toggleVisibility', ['type' => 'answer', 'id' => $answer->id]) }}" method="POST" onsubmit="return confirm('本当にこの回答の表示状態を切り替えますか？');">
+                                                {{-- 非表示を解除するフォーム --}}
+                                                <form action="{{ route('admin.reports.toggle-visibility', ['reportableType' => 'answer', 'reportableId' => $answer->id]) }}" method="POST">
                                                     @csrf
-                                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 shadow-sm
-                                                        {{ $answer->is_visible ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-blue-700 hover:bg-blue-800 text-white' }}">
-                                                        {{ $answer->is_visible ? '表示を停止する' : '表示する' }}
+                                                    @method('PUT')
+                                                    <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-xs uppercase tracking-widest transition ease-in-out duration-150 shadow-sm bg-blue-700 hover:bg-blue-800 text-white">
+                                                        表示する
                                                     </button>
                                                 </form>
                                             </td>

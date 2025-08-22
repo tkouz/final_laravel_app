@@ -2,77 +2,143 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProfileUpdateRequest;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
-use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Question;
-use App\Models\Answer;
-use App\Models\Comment;
-use App\Models\User; // Userモデルのuseステートメントを確認
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Redirect; // 修正点: Redirectファサードをインポート
+use App\Models\Question; // Questionモデルをインポート
+use App\Models\Answer; // Answerモデルをインポート
+use App\Models\Comment; // Commentモデルをインポート
+use App\Models\User; // Userモデルをインポート
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
-    public function edit(Request $request): View
+    /**
+     * ユーザーのプロフィール編集画面を表示します。
+     * Breezeが生成するルートに合わせてeditメソッド名を使用します。
+     */
+    public function edit()
     {
-        $user = $request->user();
+        $user = Auth::user();
 
-        $userQuestions = Question::where('user_id', $user->id)->latest()->get();
+        $userQuestions = Question::where('user_id', $user->id)
+                                ->orderBy('created_at', 'desc')
+                                ->get();
+        
         $userAnswers = Answer::where('user_id', $user->id)
-                                ->with('question')
-                                ->latest()
-                                ->get();
+                            ->orderBy('created_at', 'desc')
+                            ->get();
+
         $userComments = Comment::where('user_id', $user->id)
-                                ->with('answer.question')
-                                ->latest()
-                                ->get();
+                              ->orderBy('created_at', 'desc')
+                              ->get();
 
-        // ★追加または修正: ブックマークした質問を取得
-        // Userモデルにbookmarks()リレーションが定義されている前提
-        $bookmarkedQuestions = $user->bookmarks()->latest()->get();
+        $bookmarkedQuestions = $user->bookmarks()->orderBy('created_at', 'desc')->get();
 
-        return view('profile.edit', [
-            'user' => $user,
-            'userQuestions' => $userQuestions,
-            'userAnswers' => $userAnswers,
-            'userComments' => $userComments,
-            'bookmarkedQuestions' => $bookmarkedQuestions, // ★ビューに渡す
-        ]);
+        return view('profile.edit', compact('user', 'userQuestions', 'userAnswers', 'userComments', 'bookmarkedQuestions'));
     }
 
-    // ★追加または修正: プロフィール画像更新の処理 (profile.partials.update-profile-image-form.blade.phpと連携)
+    /**
+     * ユーザーのプロフィール情報を更新します。
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(Request $request): RedirectResponse
+    {
+        // プロフィール情報（アカウント名、メールアドレス）のバリデーション
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore(Auth::id())],
+        ]);
+
+        $user = Auth::user();
+
+        // データベースを更新
+        $user->forceFill([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+        ])->save();
+
+        return redirect()->route('profile.edit')->with('success', 'プロフィールが更新されました。');
+    }
+
+    /**
+     * プロフィール画像を更新します。
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function updateImage(Request $request): RedirectResponse
     {
         $request->validate([
-            'profile_image' => 'required|image|max:2048', // 2MBまで
+            'profile_image' => 'nullable|image|max:2048|mimes:jpeg,png,jpg,gif,svg',
         ]);
 
-        $user = $request->user();
-        if ($user->profile_image_path) {
-            Storage::disk('public')->delete($user->profile_image_path);
+        $user = Auth::user();
+
+        if ($request->hasFile('profile_image')) {
+            // 古い画像があれば削除
+            if ($user->profile_image_path) {
+                Storage::disk('public')->delete($user->profile_image_path);
+            }
+            // 新しい画像を保存
+            $imagePath = $request->file('profile_image')->store('profile_images', 'public');
+            $user->profile_image_path = $imagePath;
+        } elseif ($request->boolean('remove_image')) {
+            // 画像削除がリクエストされた場合
+            if ($user->profile_image_path) {
+                Storage::disk('public')->delete($user->profile_image_path);
+                $user->profile_image_path = null;
+            }
         }
 
-        $path = $request->file('profile_image')->store('profile_images', 'public');
-        $user->profile_image_path = $path;
         $user->save();
 
-        return Redirect::route('profile.edit')->with('status', 'profile-image-updated');
+        return redirect()->route('profile.edit')->with('success', 'プロフィール画像が更新されました。');
     }
 
-    // ★追加または修正: プロフィール画像削除の処理
-    public function deleteImage(Request $request): RedirectResponse
+    /**
+     * プロフィール画像を削除します。
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function deleteImage(): RedirectResponse
     {
-        $user = $request->user();
+        $user = Auth::user();
         if ($user->profile_image_path) {
             Storage::disk('public')->delete($user->profile_image_path);
             $user->profile_image_path = null;
             $user->save();
         }
-
-        return Redirect::route('profile.edit')->with('status', 'profile-image-deleted');
+        return redirect()->route('profile.edit')->with('success', 'プロフィール画像が削除されました。');
     }
 
+    /**
+     * ユーザーのアカウントを削除します。
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function destroy(Request $request): RedirectResponse
+    {
+        $request->validateWithBag('userDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return Redirect::to('/');
+    }
 }

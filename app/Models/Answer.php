@@ -19,6 +19,7 @@ class Answer extends Model
         'image_path',
         'is_best_answer',
         'is_visible', // ★追加: 投稿の表示/非表示フラグ
+        'is_hidden',
     ];
 
     /**
@@ -49,8 +50,8 @@ class Answer extends Model
     /**
      * この回答に対する違反報告を取得します。
      */
-    public function reports(): MorphMany
+    public function reports()
     {
-        return $this->morphMany(Report::class, 'reportable');
+        return $this->hasMany(Report::class, 'reportable_id')->where('reportable_type', 'App\\Models\\Answer');
     }
 }
